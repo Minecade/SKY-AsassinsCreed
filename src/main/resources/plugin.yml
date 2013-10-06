@@ -1,0 +1,30 @@
+# plugin config for bukkit
+name: ${project.name}
+main: ${main.class}
+version: '${project.version}'
+authors: [kvnamo, victorv977]
+#load: startup # disabled because we need to load the worlds, to load the world ther server must be loaded.
+
+database: true
+
+commands:
+    serverinfo:
+        description: Get current server info.
+        usage: Use /serverinfo
+    kill:
+        description: Blocked command.
+        usage: Use /kill
+    me:
+        description: Blocked command.
+        usage: Use /me
+    saveworld:
+        description: Save modifications on the world the issuer player is in. (in-game only)
+    ban:
+        description: Ban players
+    unban:
+        description: Unban players  
+    forcestart:
+        description: Skip the validation to wait to complete the minimum players and force to start the game. (Ops only)
+    rank:
+        description: "Modify ranks"
+        usage: "/rank [player] [rank] [true | false]"
