@@ -1,16 +1,16 @@
 package com.minecade.ac.plugin;
 
-import java.util.ArrayList;
 import java.util.List;
+
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 
 import com.minecade.ac.data.ACPersistence;
 import com.minecade.ac.engine.ACGame;
+import com.minecade.ac.listener.ACListener;
 import com.minecade.ac.world.ACLobby;
 import com.minecade.engine.MinecadePlugin;
-import com.minecade.engine.MinecadeWorld;
 import com.minecade.engine.command.CommandFactory;
 
 public class AssassinsCreedPlugin extends MinecadePlugin {

@@ -6,6 +6,8 @@ import com.minecade.ac.data.PlayerModel;
 import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.engine.data.MinecadeAccount;
+import com.minecade.engine.utils.EngineUtils;
+import com.minecade.ac.engine.ACInventory;
 
 public class ACPlayer{
 
@@ -194,5 +196,16 @@ public class ACPlayer{
         this.bukkitPlayer = bukkitPlayer;
         this.playerModel = plugin.getPersistence().getPlayer(bukkitPlayer.getName());
         this.minecadeAccount = plugin.getPersistence().getMinecadeAccount(bukkitPlayer.getName());
+    }
+
+    /**
+     * Load player inventory
+     * @author Kvnamo
+     */
+    public void loadLobbyInventory() {
+        EngineUtils.clearBukkitPlayer(this.bukkitPlayer);
+        this.bukkitPlayer.getInventory().addItem(ACInventory.getInstructionsBook());
+        this.bukkitPlayer.getInventory().addItem(ACInventory.getStatsBook(this));
+        this.bukkitPlayer.getInventory().addItem(ACInventory.getLeaveCompass()); 
     }
 }

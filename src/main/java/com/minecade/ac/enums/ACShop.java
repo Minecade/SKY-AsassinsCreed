@@ -2,6 +2,7 @@ package com.minecade.ac.enums;
 
 import org.bukkit.Effect;
 import org.bukkit.Location;
+import org.bukkit.inventory.ItemStack;
 
 public interface ACShop {
 
@@ -18,6 +19,13 @@ public interface ACShop {
      * @author Kvnamo
      */
     public Effect getEffect();
+    
+    /**
+     * Get item
+     * @return item
+     * @author Kvnamo
+     */
+    public ItemStack getItem();
     
     /**
      * Get location

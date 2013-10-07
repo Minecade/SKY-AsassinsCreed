@@ -1,58 +1,57 @@
 package com.minecade.ac.engine;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.world.WorldInitEvent;
 
+import com.minecade.ac.enums.MatchStatusEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
+import com.minecade.ac.task.LobbyTimerTask;
 import com.minecade.ac.world.ACWorld1;
-import com.minecade.engine.MinecadeWorld;
 import com.minecade.engine.utils.EngineUtils;
 
 public class ACGame {
+    
+    private static final String LOBBY = "lobby1";
 
     private final AssassinsCreedPlugin plugin;
     
-    private Location lobby;
-
-    private int countdown;
-
+    private List<ACPlayer> nextMatchPlayers;
+    
+    private Map<String, ACPlayer> players;
+    
+    private ACScoreboard acScoreboard;
+    
+    private LobbyTimerTask timerTask;
+    
     private int matchRequiredPlayers;
+    
+    private Location lobbyLocation;
 
+    private List<ACMatch> matches;
+    
+    private int serverMatches;
+
+    private Location lobby;
+    
     private int maxPlayers;
 
     private int vipPlayers;
-    
-    private List<ACPlayer> nextMatchPlayers;
-    
-    private List<MinecadeWorld> worlds;
-    
-    private List<ACMatch> matches;
-    
-    //private LobbyTimerTask timerTask;
-  
-    /**
-     * Get minecade worlds
-     * @return
-     * @author Kvnamo
-     */
-    public List<MinecadeWorld> getWorlds(){
-        return this.worlds; 
-    }
-    
-    /**
-     * Set minecade worlds
-     * @param worlds
-     * @author Kvnamo
-     */
-    public void setWorlds(List<MinecadeWorld> worlds){
-        this.worlds = worlds;
-    }
+
+    private int countdown; 
     
     /**
      * ACGame constructor
@@ -63,14 +62,18 @@ public class ACGame {
         this.plugin = plugin;
         
         // Load properties
-        this.countdown = plugin.getConfig().getInt("lobby.start-countdown");
-        this.matchRequiredPlayers = plugin.getConfig().getInt("match.required-players");
+        this.serverMatches = plugin.getConfig().getInt("server.matches");
         this.maxPlayers = plugin.getConfig().getInt("server.max-players");
         this.vipPlayers = plugin.getConfig().getInt("server.max-vip-players");
+        this.countdown = plugin.getConfig().getInt("lobby.start-countdown");
+        this.matchRequiredPlayers = plugin.getConfig().getInt("match.required-players");
         
-        //TODO: Register scoreboard
-        //this.acScoreboard = new ASScoreboard(this.plugin);
-        //this.acScoreboard.init();
+        // Register scoreboard
+        this.acScoreboard = new ACScoreboard(this.plugin);
+        this.acScoreboard.init();
+        
+        // Initialize properties
+        this.players =  new ConcurrentHashMap<String, ACPlayer>(this.vipPlayers);
     }
 
     /**
@@ -93,11 +96,6 @@ public class ACGame {
             this.lobby = EngineUtils.locationFromConfig(this.plugin.getConfig(), world, "lobby.spawn");
             world.setSpawnLocation(this.lobby.getBlockX(), this.lobby.getBlockY(), this.lobby.getBlockZ());
         }
-        
-        // Initialize Worlds
-        this.worlds = new ArrayList<MinecadeWorld>();
-        this.worlds.add(new ACWorld1(this.plugin));
-
     }
     
     /**
@@ -121,7 +119,7 @@ public class ACGame {
         // Check if the server needs more players or if the player is VIP
         if(this.players.size() <= this.maxPlayers || (player.getMinecadeAccount().isVip() && this.players.size() <= this.vipPlayers)){
             // Load lobby inventory
-            player.loadInventory();
+            player.loadLobbyInventory();
             
             // Assign player scoreboard
             this.acScoreboard.assignTeam(player);
@@ -158,15 +156,15 @@ public class ACGame {
         
         synchronized(this.matches){ 
             // Load all posible matches
-            if(this.matches.size() < this.worlds){
-                match = new ACMatch(plugin);
-                match.world = this.worlds.get(this.matches.size());
+            if(this.matches.size() < this.serverMatches){
+                match = new ACMatch(this.plugin);
+                match.setACWorld(new ACWorld1(this.plugin));
                 this.matches.add(match);
             }
             
             match = null;
             
-            for (PMSMatch availableMatch : this.matches.values()) {
+            for (ACMatch availableMatch : this.matches) {
                 if(MatchStatusEnum.STOPPED.equals(match.getStatus())){
                     match = availableMatch;
                 }
@@ -178,20 +176,22 @@ public class ACGame {
             
             // Select next match players
             synchronized(this.players){
-                for (PMSPlayer player : this.players.values()) {
+                for (ACPlayer player : this.players.values()) {
+                    
                     if(player.getCurrentMatch() == null){
                         player.setCurrentMatch(match);
                         this.nextMatchPlayers.add(player);
-                        // Check if players are ready
+                        
+                        // Announce next match player
                         if(this.nextMatchPlayers.size() == this.matchRequiredPlayers) break;
                     }
                 }
             }
             
             // Announce next match players
-            this.broadcastLobbyMessage(
+            this.broadcastMessage(
                 String.format("%s%s %sare going to the next match on %s.", ChatColor.RED, 
-                    this.nextMatchPlayers.toString(), ChatColor.DARK_GRAY, nextMatch.getArena().getName()));
+                    this.nextMatchPlayers.toString(), ChatColor.DARK_GRAY, match.getACWorld().getName()));
         }
     }
 
@@ -217,7 +217,7 @@ public class ACGame {
     public void playerQuit(PlayerQuitEvent event){
         
         String playerName = event.getPlayer().getName();
-        PMSPlayer player = this.players.get(playerName);
+        ACPlayer player = this.players.get(playerName);
         
         this.players.remove(playerName);
         
@@ -226,9 +226,9 @@ public class ACGame {
         
         // The player is in the lobby
         if (match == null){
-            this.broadcastLobbyMessage(String.format("%s%s %squit the game.", ChatColor.RED, playerName, ChatColor.GRAY));
+            this.broadcastMessage(String.format("%s%s %squit the game.", ChatColor.RED, playerName, ChatColor.GRAY));
         }
-        else if(MatchStatusEnum.STOPPED(match.status)){
+        else if(MatchStatusEnum.STOPPED.equals(match.getStatus())){
             this.nextMatchPlayers.remove(player);
             
             // Match is about to begin and we need a new player.
@@ -243,28 +243,26 @@ public class ACGame {
             
             // If there is no player stop timer and wait.
             if(this.nextMatchPlayers.size() < this.matchRequiredPlayers){
-                this.lobbyTimerTask.cancel();
+                this.timerTask.cancel();
             }
             
-            this.broadcastLobbyMessage(String.format("%s[%s] %squit the game.", ChatColor.RED, playerName, ChatColor.GRAY));
+            this.broadcastMessage(String.format("%s[%s] %squit the game.", ChatColor.RED, playerName, ChatColor.GRAY));
         }
-        else{
-            match.playerQuit(event);
-        }
+        else match.playerQuit(player);
     }
     
     /**
-     * On player dies.
+     * On player death.
      * @param event
      * @author: kvnamo
      */
     public void playerDeath(PlayerDeathEvent event) {
         
-        final ACPlayer player = this.players.get(event.getPlayer().getName());
+        final ACPlayer player = this.players.get(event.getEntity().getName());
         final ACMatch match = player.getCurrentMatch();
         
         // If the player is in the lobby do nothing
-        if (match != null && MatchStatusEnum.RUNNING(match.getStatus())){
+        if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
             match.playerDeath(player);
         }
     }
@@ -280,7 +278,7 @@ public class ACGame {
         final ACMatch match = player.getCurrentMatch();
         
         // If the player is in the lobby do nothing
-        if (match != null && MatchStatusEnum.RUNNING(match.getStatus())){
+        if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
             match.playerRespawn(player);
         }
     }
@@ -296,7 +294,7 @@ public class ACGame {
         final ACMatch match = player.getCurrentMatch();
         
         // If the player is in the lobby do nothing
-        if (match != null && MatchStatusEnum.RUNNING(match.getStatus())){
+        if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
             match.playerMove(player, event);
         }
     }
@@ -312,7 +310,7 @@ public class ACGame {
         final ACMatch match = player.getCurrentMatch();
         
         // If the player is in the lobby do nothing
-        if (match != null && MatchStatusEnum.RUNNING(match.getStatus())){
+        if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
             match.playerSuperJump(player);
         }
     }
@@ -329,6 +327,38 @@ public class ACGame {
         
         if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
             //bukkitPlayer.teleport();
+        }
+    }
+
+    /**
+     * Lobby time left to start a match
+     * @param countdown
+     * @author Kvnamo
+     */
+    public void timeLeft(int countdown) {
+        
+        this.countdown = countdown;
+        this.acScoreboard.setTimeLeft(countdown);
+        
+        if(this.countdown < 6) return;
+        
+        for (ACPlayer player : this.players.values()) {
+            player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);
+        } 
+    }
+    
+    /**
+     * Broadcast lobby players message
+     * @param format
+     * @author Kvnamo
+     */
+    private void broadcastMessage(String message) {
+        
+        // Send message only to players in lobby
+        for (ACPlayer player : this.players.values()) {
+            if(player.getCurrentMatch() == null || MatchStatusEnum.STOPPED.equals(player.getCurrentMatch().getStatus())){
+                player.getBukkitPlayer().sendMessage(message);
+            }
         }
     }
 }

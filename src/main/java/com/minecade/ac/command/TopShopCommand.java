@@ -1,3 +1,14 @@
+package com.minecade.ac.command;
+
+import org.bukkit.ChatColor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+
+import com.minecade.ac.engine.ACGame;
+import com.minecade.engine.utils.MinecadeCommand;
+
 @MinecadeCommand(commandName="topshop")
 public class TopShopCommand implements CommandExecutor {
     
@@ -19,8 +30,9 @@ public class TopShopCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
-        if (sender instanceof Player) game.goToTopShop(sender); 
+        if (sender instanceof Player) this.game.goToTopShop((Player)sender); 
         else sender.sendMessage(String.format("%sYou need to be in the game to do this!", ChatColor.RED));
 
         return true;
+    }
 }

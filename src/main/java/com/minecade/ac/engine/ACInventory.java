@@ -11,10 +11,62 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.Potion;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionType;
 
 
 public class ACInventory {
+    
+    /**
+     * Black Ale
+     * @return Black Ale
+     * @author kvnamo
+     */
+    public static ItemStack getBlackAle(){
+        
+        ItemStack blackAle = new Potion(PotionType.INSTANT_DAMAGE).toItemStack(1);
+        
+        final PotionMeta blackAleMeta = (PotionMeta) blackAle.getItemMeta();
+        blackAleMeta.setDisplayName(ChatColor.WHITE + "Black Ale");
+        blackAleMeta.addEnchant(Enchantment.DAMAGE_ALL, 260, true);
+        blackAleMeta.addCustomEffect(PotionEffectType.DAMAGE_RESISTANCE.createEffect(1800, 2), true);
+        blackAleMeta.addCustomEffect(PotionEffectType.CONFUSION.createEffect(100, 1), true);
+        blackAleMeta.setLore(Arrays.asList(
+                ChatColor.GRAY + "Strength II (1:30).",
+                ChatColor.GRAY + "Nausea (0:10).",
+                ChatColor.DARK_GRAY + "Induces a drunken rage with good and bad effects.",
+                ChatColor.BLUE + "+260% Attack Damage."));
+        
+        blackAle.setItemMeta(blackAleMeta);
 
+        return blackAle;
+    }
+    
+    /**
+     * Get Boarding Axe
+     * @return Boarding Axe
+     * @author kvnamo
+     */
+    public static ItemStack getBoardingAxe() {
+        
+        ItemStack boardingAxe = new ItemStack(Material.STONE_HOE, 1);
+        boardingAxe.addUnsafeEnchantment(Enchantment.DAMAGE_ALL, 2);
+        boardingAxe.addUnsafeEnchantment(Enchantment.DURABILITY, Enchantment.DURABILITY.getMaxLevel());
+        
+        final ItemMeta boardingAxeMeta = boardingAxe.getItemMeta();
+        boardingAxeMeta.setDisplayName(ChatColor.WHITE + "Boarding Axe");
+        boardingAxeMeta.setLore(Arrays.asList(
+                ChatColor.GRAY + "Unbreaking X.",
+                ChatColor.DARK_GRAY + "Used when boarding enemy ships.",
+                ChatColor.BLUE + "+3 Attack Damage."));
+        
+        boardingAxe.setItemMeta(boardingAxeMeta);
+        
+        return boardingAxe;
+    }
+    
     /**
      * Get Bow
      * @return Bow
@@ -27,7 +79,7 @@ public class ACInventory {
         bow.addUnsafeEnchantment(Enchantment.DURABILITY, Enchantment.DURABILITY.getMaxLevel());
         
         final ItemMeta bowMeta = bow.getItemMeta();
-        bowMeta.setDisplayName(ChatColor.AQUA + "Bow");
+        bowMeta.setDisplayName(ChatColor.WHITE + "Bow");
         bowMeta.setLore(Arrays.asList(
                 ChatColor.GRAY + "Unbreaking X.",
                 ChatColor.DARK_GRAY + "An excellent long range weapon.",
@@ -48,7 +100,7 @@ public class ACInventory {
         cane.addUnsafeEnchantment(Enchantment.KNOCKBACK, 2);
         
         final ItemMeta caneMeta = cane.getItemMeta();
-        caneMeta.setDisplayName(ChatColor.RED + "Cane");
+        caneMeta.setDisplayName(ChatColor.WHITE + "Cane");
         caneMeta.setLore(Arrays.asList(
             ChatColor.GRAY + "Knockback  II.",
             ChatColor.DARK_GRAY + "Used for splitting up feuding individuals."));
@@ -57,28 +109,91 @@ public class ACInventory {
         
         return cane;
     }
+     
+    /**
+     * Get Cutlass
+     * @return Cutlass
+     * @author kvnamo
+     */
+    public static ItemStack getCutLass() {
+        
+        ItemStack cutlass = new ItemStack(Material.STONE_AXE, 1);
+        cutlass.addUnsafeEnchantment(Enchantment.DAMAGE_ALL, 5);
+        cutlass.addUnsafeEnchantment(Enchantment.DURABILITY, Enchantment.DURABILITY.getMaxLevel());
+        
+        final ItemMeta cutlassMeta = cutlass.getItemMeta();
+        cutlassMeta.setDisplayName(ChatColor.WHITE + "Cutlass");
+        cutlassMeta.setLore(Arrays.asList(
+                ChatColor.GRAY + "Unbreaking X.",
+                ChatColor.DARK_GRAY + "A pirate assassin's best friend.",
+                ChatColor.BLUE + "+5 Attack Damage."));
+        
+        cutlass.setItemMeta(cutlassMeta);
+        
+        return cutlass;
+    }
     
-// FIXME: esto podría estar en el mapa    
-//    /**
-//     * Get hidden blade 
-//     * @author Kvnamo
-//     */
-//    public static ItemStack getHiddenBlade(){
-//        
-//        final ItemStack hiddenBlade = new ItemStack(Material.STICK, 1);
-//        hiddenBlade.addUnsafeEnchantment(Enchantment.DURABILITY, Enchantment.DURABILITY.getMaxLevel());
-//        
-//        final ItemMeta hiddenBladeMeta = hiddenBlade.getItemMeta();
-//        hiddenBladeMeta.setDisplayName(ChatColor.RED + "Hidden Blade");
-//        hiddenBladeMeta.setLore(Arrays.asList(
-//            ChatColor.GRAY + "Unbreaking X.",
-//            ChatColor.DARK_GRAY + "A simple pirating tool.",
-//            ChatColor.BLUE + "2+ Attack Damage."));
-//        
-//        hiddenBlade.setItemMeta(caneMeta);
-//        
-//        return cane;
-//    }
+    /**
+     * Get Decoy
+     * @return Decoy
+     * @author kvnamo
+     */
+    public static ItemStack getDecoy() {
+        
+        ItemStack decoy = new ItemStack(Material.EGG, 1);
+        
+        final ItemMeta decoyMeta = decoy.getItemMeta();
+        decoyMeta.setDisplayName(ChatColor.WHITE + "Decoy");
+        decoyMeta.setLore(Arrays.asList(
+                ChatColor.GRAY + "A Skeletal crewman willing to cause a distraction."));
+        
+        decoy.setItemMeta(decoyMeta);
+        
+        return decoy;
+    }
+    
+    /**
+     * Granade
+     * @return Granade
+     * @author kvnamo
+     */
+    public static ItemStack getGranade(){
+        
+        ItemStack granade = new Potion(PotionType.INSTANT_DAMAGE).splash().toItemStack(1);
+        
+        final PotionMeta granadeMeta = (PotionMeta) granade.getItemMeta();
+        granadeMeta.setDisplayName(ChatColor.WHITE + "Granade");
+        granadeMeta.addEnchant(Enchantment.DAMAGE_ALL, 2, true);
+        granadeMeta.setLore(Arrays.asList(
+                ChatColor.GRAY + "Instant Damage II.",
+                ChatColor.DARK_GRAY + "Effective against the Navy, innefective against village folk."));
+        
+        granade.setItemMeta(granadeMeta);
+
+        return granade;
+    }
+    
+    /**
+     * Get hidden blade 
+     * @author Kvnamo
+     */
+    public static ItemStack getHiddenBlade(){
+        
+        final ItemStack hiddenBlade = new ItemStack(Material.STICK, 1);
+        hiddenBlade.addUnsafeEnchantment(Enchantment.DAMAGE_ALL, 2);
+        hiddenBlade.addUnsafeEnchantment(Enchantment.DURABILITY, Enchantment.DURABILITY.getMaxLevel());
+        
+        final ItemMeta hiddenBladeMeta = hiddenBlade.getItemMeta();
+        hiddenBladeMeta.setDisplayName(ChatColor.RED + "Hidden Blade");
+        hiddenBladeMeta.setLore(Arrays.asList(
+            ChatColor.GRAY + "Unbreaking X.",
+            ChatColor.DARK_GRAY + "A simple pirating tool.",
+            ChatColor.BLUE + "2+ Attack Damage."));
+        
+        hiddenBlade.setItemMeta(hiddenBladeMeta);
+        
+        return hiddenBlade;
+    }
     
     /**
      * Instructions book
@@ -90,7 +205,7 @@ public class ACInventory {
         final ItemStack book = new ItemStack(Material.WRITTEN_BOOK, 1);
         
         BookMeta bookMeta = (BookMeta) book.getItemMeta();
-        bookMeta.setTitle(ChatColor.YELLOW + "Instructions book");
+        bookMeta.setTitle(ChatColor.WHITE + "Instructions book");
         bookMeta.setPages(
             String.format("%s%sWELCOME TO TNT RUN! \n\n\n%s" +
                 "Run all over the map to destroy the blocks so other players fall into the void. Last player remaining wins the game.", 
@@ -115,7 +230,7 @@ public class ACInventory {
         final ItemStack invisibleMeca = new ItemStack(Material.EMERALD, 1);
         
         ItemMeta invisibleMecaMeta = (ItemMeta) invisibleMeca.getItemMeta();
-        invisibleMecaMeta.setDisplayName(ChatColor.RED + "Invisible Meca");            
+        invisibleMecaMeta.setDisplayName(ChatColor.WHITE + "Invisible Meca");            
         invisibleMecaMeta.setLore(Arrays.asList(ChatColor.GRAY + "10 seconds of invisivility"));          
         invisibleMeca.setItemMeta(invisibleMecaMeta);
         
@@ -132,7 +247,7 @@ public class ACInventory {
         final ItemStack compass = new ItemStack(Material.COMPASS, 1);
         
         final ItemMeta compassMeta = compass.getItemMeta();
-        compassMeta.setDisplayName(ChatColor.RED + "Leave Game");            
+        compassMeta.setDisplayName(ChatColor.WHITE + "Leave Game");            
         compassMeta.setLore(Arrays.asList(ChatColor.GRAY + "Click to Use"));            
         compass.setItemMeta(compassMeta);
         
@@ -149,7 +264,7 @@ public class ACInventory {
         scimitar.addUnsafeEnchantment(Enchantment.DURABILITY, Enchantment.DURABILITY.getMaxLevel());
         
         final ItemMeta scimitarMeta = scimitar.getItemMeta();
-        scimitarMeta.setDisplayName(ChatColor.GREEN + "Scimitar");
+        scimitarMeta.setDisplayName(ChatColor.WHITE + "Scimitar");
         scimitarMeta.setLore(Arrays.asList(
             ChatColor.GRAY + "Unbreaking X.",
             ChatColor.DARK_GRAY + "The perfect weapon for a member of the Navy."));
@@ -160,6 +275,27 @@ public class ACInventory {
     }
     
     /**
+     * Smoke Bomb
+     * @return smoke bomb
+     * @author kvnamo
+     */
+    public static ItemStack getSmokeBomb() {
+        
+        ItemStack smokeBomb = new Potion(PotionType.INSTANT_DAMAGE).splash().toItemStack(1);
+        
+        final PotionMeta smokeBombMeta = (PotionMeta) smokeBomb.getItemMeta();
+        smokeBombMeta.setDisplayName(ChatColor.DARK_RED + "Smoke Bomb");
+        smokeBombMeta.addCustomEffect(PotionEffectType.BLINDNESS.createEffect(160, Integer.MAX_VALUE), true);
+        smokeBombMeta.setLore(Arrays.asList(
+                ChatColor.GRAY + "Blindness (0:08).",
+                ChatColor.DARK_GRAY + "Restricts the view of the unfortunate targets."));
+        
+        smokeBomb.setItemMeta(smokeBombMeta);
+
+        return smokeBomb;
+    }
+    
+    /**
      * Get solid cane
      * @author Kvnamo
      */
@@ -167,9 +303,10 @@ public class ACInventory {
         
         final ItemStack solidCane = new ItemStack(Material.STICK, 1);
         solidCane.addUnsafeEnchantment(Enchantment.KNOCKBACK, 4);
+        solidCane.addUnsafeEnchantment(Enchantment.DAMAGE_ALL, 1);
         
         final ItemMeta solidCaneMeta = solidCane.getItemMeta();
-        solidCaneMeta.setDisplayName(ChatColor.RED + "Solid Cane");
+        solidCaneMeta.setDisplayName(ChatColor.WHITE + "Solid Cane");
         solidCaneMeta.setLore(Arrays.asList(
                 ChatColor.GRAY + "Knockback IV.",
                 ChatColor.DARK_GRAY + "No one is getting past you."));
@@ -189,7 +326,7 @@ public class ACInventory {
         final ItemStack stats = new ItemStack(Material.WRITTEN_BOOK, 1);
         
         final BookMeta statsMeta = (BookMeta) stats.getItemMeta();
-        statsMeta.setTitle(ChatColor.LIGHT_PURPLE + "Stats book");
+        statsMeta.setTitle(ChatColor.WHITE + "Stats book");
         
         DecimalFormat decimalFormat = new DecimalFormat("0.000");
         String kdr = (double)player.getPlayerModel().getLosses() != 0 ? 
@@ -219,7 +356,7 @@ public class ACInventory {
         strongCane.addUnsafeEnchantment(Enchantment.KNOCKBACK, 3);
         
         final ItemMeta strongCaneMeta = strongCane.getItemMeta();
-        strongCaneMeta.setDisplayName(ChatColor.GOLD + "Strong Cane");
+        strongCaneMeta.setDisplayName(ChatColor.WHITE + "Strong Cane");
         strongCaneMeta.setLore(Arrays.asList(
             ChatColor.GRAY + "Knockback III.",
             ChatColor.DARK_GRAY + "For when they are too close to shoot."));
@@ -228,6 +365,29 @@ public class ACInventory {
         
         return strongCane;
     }  
+    
+    /**
+     * Get Boarding Axe
+     * @return Boarding Axe
+     * @author kvnamo
+     */
+    public static ItemStack getTomaHawk() {
+        
+        ItemStack tomaHawk = new ItemStack(Material.STONE_AXE, 1);
+        tomaHawk.addUnsafeEnchantment(Enchantment.DAMAGE_ALL, 4);
+        tomaHawk.addUnsafeEnchantment(Enchantment.DURABILITY, Enchantment.DURABILITY.getMaxLevel());
+        
+        final ItemMeta tomaHawkMeta = tomaHawk.getItemMeta();
+        tomaHawkMeta.setDisplayName(ChatColor.WHITE + "Toma Hawk");
+        tomaHawkMeta.setLore(Arrays.asList(
+                ChatColor.GRAY + "Unbreaking X.",
+                ChatColor.DARK_GRAY + "Light axe used for close combat.",
+                ChatColor.BLUE + "+4 Attack Damage."));
+        
+        tomaHawk.setItemMeta(tomaHawkMeta);
+        
+        return tomaHawk;
+    }
     
     /**
      * Get zombie armor
