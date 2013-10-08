@@ -9,14 +9,19 @@ import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
-import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
-import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.world.WorldInitEvent;
+import org.bukkit.inventory.ItemStack;
 
+import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.enums.MatchStatusEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.ac.task.LobbyTimerTask;
@@ -59,6 +64,7 @@ public class ACGame {
      * @author kvnamo
      */
     public ACGame(AssassinsCreedPlugin plugin) {
+        
         this.plugin = plugin;
         
         // Load properties
@@ -103,7 +109,7 @@ public class ACGame {
      * @param PlayerJoinEvent
      * @author kvnamo 
      */
-    public void playerJoin(PlayerJoinEvent event) {
+    public void playerJoin(final PlayerJoinEvent event) {
         
         final Player bukkitPlayer = event.getPlayer();
 
@@ -204,9 +210,7 @@ public class ACGame {
         ACMatch match = this.nextMatchPlayers.size() == this.matchRequiredPlayers ? 
             ((ACPlayer)this.nextMatchPlayers.get(0)).getCurrentMatch() : null;
         
-        if(match != null){
-            match.init(this.nextMatchPlayers);
-        }
+        if(match != null) match.init(this.nextMatchPlayers);
     }
 
     /**
@@ -214,7 +218,7 @@ public class ACGame {
      * @param event
      * @author kvnamo
      */
-    public void playerQuit(PlayerQuitEvent event){
+    public void playerQuit(final PlayerQuitEvent event){
         
         String playerName = event.getPlayer().getName();
         ACPlayer player = this.players.get(playerName);
@@ -252,19 +256,23 @@ public class ACGame {
     }
     
     /**
-     * On player death.
+     * On entity death.
      * @param event
      * @author: kvnamo
      */
-    public void playerDeath(PlayerDeathEvent event) {
+    public void entityDeath(final EntityDeathEvent event) {
         
-        final ACPlayer player = this.players.get(event.getEntity().getName());
-        final ACMatch match = player.getCurrentMatch();
+        if(event.getEntity() instanceof Player){
         
-        // If the player is in the lobby do nothing
-        if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
-            match.playerDeath(player);
+            final ACPlayer player = this.players.get(((Player)event.getEntity()).getName());
+            final ACMatch match = player.getCurrentMatch();
+            
+            // If the player is in the lobby do nothing
+            if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
+                match.entityDeath(event, player);
+            }
         }
+        //else TODO When an NPC is killed, 30 seconds of game time is added
     }
     
     /**
@@ -272,64 +280,94 @@ public class ACGame {
      * @param event
      * @author: kvnamo
      */
-    public void playerRespawn(PlayerRespawnEvent event){
+    public void playerRespawn(final PlayerRespawnEvent event){
         
         final ACPlayer player = this.players.get(event.getPlayer().getName());
         final ACMatch match = player.getCurrentMatch();
         
         // If the player is in the lobby do nothing
-        if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
-            match.playerRespawn(player);
+        if (match != null && !MatchStatusEnum.STOPPED.equals(match.getStatus())){
+            match.playerRespawn(event, player);
         }
+        else event.setRespawnLocation(this.lobbyLocation); 
     }
+    
+    /**
+     * On entity damage
+     * @param event
+     * @author Kvnamo
+     */
+    public void entityDamage(final EntityDamageEvent event) {
+        
+        // If the player was damaged
+        if(event.getEntity() instanceof Player){
+            
+            final ACPlayer player = this.players.get(((Player)event.getEntity()).getName());
+            final ACMatch match = player.getCurrentMatch();
+            
+            // If the player is in a match
+            if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
+                match.entityDamage(event, player);
+                return;
+            } 
+            
+            // If the player is in the lobby do nothing
+            if(DamageCause.VOID.equals(event.getCause())){
+                event.getEntity().teleport(this.lobbyLocation);
+            }
+            
+            event.setCancelled(true);
+        }
+    } 
     
     /**
      * On the player moves
      * @param event
      * @author kvnamo
      */
-    public void playerMove(PlayerMoveEvent event) {
+    public void playerMove(final PlayerMoveEvent event) {
         
         final ACPlayer player = this.players.get(event.getPlayer().getName());
         final ACMatch match = player.getCurrentMatch();
         
         // If the player is in the lobby do nothing
         if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
-            match.playerMove(player, event);
+            match.playerMove(event, player);
         }
     }
     
     /**
-     * On player super jump
+     * On player interact event
      * @param event
      * @author Kvnamo
      */
-    public void playerSuperJump(PlayerToggleFlightEvent event) {
+    public void playerInteract(final PlayerInteractEvent event) {
         
-        final ACPlayer player = this.players.get(event.getPlayer().getName());
-        final ACMatch match = player.getCurrentMatch();
+        // Get item in hand
+        Player bukkitPlayer = event.getPlayer();
+        ItemStack itemInHand = event.getPlayer().getItemInHand();
         
-        // If the player is in the lobby do nothing
-        if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
-            match.playerSuperJump(player);
+        // Check item used with right click.
+        if (Action.RIGHT_CLICK_AIR.equals(event.getAction())) {
+
+            if(ACInventory.getLeaveCompass().getType().equals(itemInHand.getType())){
+                EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+                return;
+            }
         }
+        else if(Action.RIGHT_CLICK_BLOCK.equals(event.getAction())){
+            final ACPlayer player = this.players.get(bukkitPlayer.getName());
+            final ACMatch match = player.getCurrentMatch();
+            
+            if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) && 
+                CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                ACShop.shop(bukkitPlayer);
+            }
+            else event.setCancelled(true);
+        }
+        else if(event.getClickedBlock() != null && !event.getPlayer().isOp()) event.setCancelled(true);
     }
     
-    /**
-     * Go to top shop
-     * @param bukkitPlayer
-     * @author Kvnamo
-     */
-    public void goToTopShop(final Player bukkitPlayer){
-        
-        final ACPlayer player = this.players.get(bukkitPlayer.getName());
-        final ACMatch match = player.getCurrentMatch();
-        
-        if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
-            //bukkitPlayer.teleport();
-        }
-    }
-
     /**
      * Lobby time left to start a match
      * @param countdown
@@ -348,6 +386,36 @@ public class ACGame {
     }
     
     /**
+     * Go to top shop
+     * @param bukkitPlayer
+     * @author Kvnamo
+     */
+    public void goToTopShop(final Player bukkitPlayer){
+        
+        final ACPlayer player = this.players.get(bukkitPlayer.getName());
+        final ACMatch match = player.getCurrentMatch();
+        
+        if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
+            bukkitPlayer.teleport(match.getACWorld().getShipLocation());
+        }
+    }
+    
+    /**
+     * Go to lower shop
+     * @param bukkitPlayer
+     * @author Kvnamo
+     */
+    public void goToLowerShop(final Player bukkitPlayer){
+        
+        final ACPlayer player = this.players.get(bukkitPlayer.getName());
+        final ACMatch match = player.getCurrentMatch();
+        
+        if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
+            bukkitPlayer.teleport(match.getACWorld().getLowerShopLocation());
+        }
+    }
+    
+    /**
      * Broadcast lobby players message
      * @param format
      * @author Kvnamo
@@ -361,4 +429,5 @@ public class ACGame {
             }
         }
     }
+
 }

@@ -2,22 +2,29 @@ package com.minecade.ac.enums;
 
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
-public enum TopShopEnum implements ACShopInventory{
+import com.minecade.ac.engine.ACInventory;
 
-    ARMOR(8, new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Integer.MAX_VALUE, 2), -172, 115, 36),
+public enum LowerShopEnum implements ACShopInventory{
+
+    BLACKALE(5, ACInventory.getBlackAle(), -172, 108, 21),
     
-    HEALTH(5, new PotionEffect(PotionEffectType.HEALTH_BOOST, Integer.MAX_VALUE, 3), -167, 115, 35), 
+    BOARDINGAXE(4, ACInventory.getBoardingAxe(), -170, 108, 15),
     
-    INVISIBILITY(8, new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0), -168, 115, 36),
+    CUTLASS(5, ACInventory.getCutLass(), -166, 108, 15), 
     
-    JUMP(1, new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, 2), -167, 115, 33),        
+    DECOOY(3, ACInventory.getDecoy(), -166, 108, 21),
     
-    SPRINT(1, new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1), -170, 115, 36);
+    GRENADE(8, ACInventory.getGranade(), -170, 108, 21),
+    
+    HIDDENBLADE(1, ACInventory.getHiddenBlade(), -172, 108, 15), 
+    
+    SOMEKEBOMB(1, ACInventory.getSmokeBomb(), -168, 108, 21),
+    
+    TOMAHAWK(1, ACInventory.getTomaHawk(), -168, 108, 15);
     
     private int cost;
-
+    
     /**
      * Get cost
      * @return cost
@@ -28,17 +35,17 @@ public enum TopShopEnum implements ACShopInventory{
         return this.cost;
     }
     
-    private PotionEffect potionEffect;
-    
     /**
-     * Get effect
-     * @return effect
+     * Get potion effect
+     * @return potion effect
      * @author Kvnamo
      */
     @Override
     public PotionEffect getPotionEffect(){
-        return this.potionEffect;
+        return null;
     }
+    
+    private ItemStack item;
     
     /**
      * Get item
@@ -47,7 +54,7 @@ public enum TopShopEnum implements ACShopInventory{
      */
     @Override
     public ItemStack getItem() {
-        return null;
+        return this.item;
     }
     
     private double x;
@@ -87,18 +94,18 @@ public enum TopShopEnum implements ACShopInventory{
         return this.z;
     }
     
-    /**
-     * Shop enum constructor
-     * @param cost
-     * @param effect
-     * @param x
-     * @param y
-     * @param z
-     * @author Kvnamo
-     */
-    private TopShopEnum(int cost, PotionEffect potionEffect, double x, double y, double z){
+   /**
+    * Shop enum constructor
+    * @param cost
+    * @param item
+    * @param x
+    * @param y
+    * @param z
+    * @author Kvnamo
+    */
+    private LowerShopEnum(int cost, ItemStack item, double x, double y, double z){
         this.cost = cost;
-        this.potionEffect = potionEffect;
+        this.item = item;
         this.x = x;
         this.y = y;
         this.z = z;

@@ -1,5 +1,6 @@
 package com.minecade.ac.engine;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.entity.Zombie;
 import org.bukkit.inventory.EntityEquipment;
@@ -29,6 +30,7 @@ public class ACCharacter {
                 // Set potions
                 player.getBukkitPlayer().setExp(1);
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getInvisibleMeca());
+                player.getBukkitPlayer().sendMessage(String.format("%You are the Assassin!", ChatColor.RED));
                 break;
             
             case BODYGUARD:
@@ -42,6 +44,7 @@ public class ACCharacter {
                 
                 // Set inventory
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getSolidCane());
+                player.getBukkitPlayer().sendMessage(String.format("%You are a Bodyguard!", ChatColor.BLUE));
                 break;
                     
             case MUSKETEER:
@@ -54,6 +57,7 @@ public class ACCharacter {
                 
                 // Set inventory
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getStrongCane());
+                player.getBukkitPlayer().sendMessage(String.format("%You are a Musketeer!", ChatColor.BLUE));
                 break;
                 
             case SWORDSMAN:
@@ -67,6 +71,7 @@ public class ACCharacter {
                 
                 // Set inventory
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getCane());
+                player.getBukkitPlayer().sendMessage(String.format("%You are a Swordsman!", ChatColor.BLUE));
                 break;
 
             default:
@@ -94,7 +99,7 @@ public class ACCharacter {
             case GREEN:
                 equipment.setArmorContents(ACInventory.getZombieArmor(Color.GREEN));
             break;
-            case GREY:
+            case GRAY:
                 equipment.setArmorContents(ACInventory.getZombieArmor(Color.GRAY));
                 break;
             case RED:

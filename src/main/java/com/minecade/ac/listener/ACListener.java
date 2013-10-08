@@ -7,16 +7,17 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.LeavesDecayEvent;
-import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
-import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.event.world.WorldInitEvent;
 
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
@@ -44,7 +45,7 @@ public class ACListener implements Listener{
     }
     
     /**
-     * Called by PlayerJoinEvent when player joins the match.
+     * On PlayerJoinEvent when player joins the match.
      * @param playerJoinEvent
      * @author: kvnamo
      */
@@ -56,7 +57,7 @@ public class ACListener implements Listener{
     }
     
     /**
-     * Called by PlayerQuitEvent when player exits the match.
+     * On PlayerQuitEvent when player exits the match.
      * @param playerQuitEvent
      * @author kvnamo
      */
@@ -68,19 +69,17 @@ public class ACListener implements Listener{
     }
     
       /**
-      * Called by PlayerDeathEvent when player dies
+      * On PlayerDeathEvent when player dies
       * @param playerDeathEvent
       * @author kvnamo
       */
      @EventHandler
-     public void onPlayerDeath(PlayerDeathEvent event) {
-         // Remove quit message.
-         event.setDeathMessage(null);
-         this.plugin.getGame().playerDeath(event);
+     public void onEtityDeath(EntityDeathEvent event) {
+         this.plugin.getGame().entityDeath(event);
      }
      
       /**
-      * Called by PlayerRespawnEvent when player respawns.
+      * On PlayerRespawnEvent when player respawns.
       * @param event
       * @author 
       */
@@ -88,9 +87,19 @@ public class ACListener implements Listener{
      public void onPlayerRespawn(PlayerRespawnEvent event) {
          this.plugin.getGame().playerRespawn(event); 
      }
-    
+     
+       /**
+       * Call when a entity is damage.
+       * @param event
+       * @author kvnamo
+       */
+      @EventHandler
+      public void onEntityDamage(EntityDamageEvent event) {
+          this.plugin.getGame().entityDamage(event);
+      }
+      
     /**
-     * When player moves
+     * On player move
      * @param event
      * @author kvnamo
      */
@@ -100,40 +109,18 @@ public class ACListener implements Listener{
     }
     
     /**
-    * Call by PlayerToggleFlightEvent on flight attempt
-    * @param event
+    * Call by PlayerInteractEvent handler when player interacts.
+    * @param playerInteractEvent
     * @author kvnamo
     */
    @EventHandler
-   public void onPlayerSuperJump(PlayerToggleFlightEvent event) { 
-       if(!GameMode.CREATIVE.equals(event.getPlayer().getGameMode())){
-           this.plugin.getGame().playerSuperJump(event);
-       }
-   } 
-    
-//    /**
-//     * Call when a entity is damage.
-//     * @param event
-//     * @author kvnamo
-//     */
-//    @EventHandler
-//    public void onEntityDamage(final EntityDamageEvent event) {
-//        this.plugin.getGame().entityDamage(event);
-//    }
-//    
-//    /**
-//     * Call by PlayerInteractEvent handler when player interacts.
-//     * @param playerInteractEvent
-//     * @author kvnamo
-//     */
-//    @EventHandler
-//    public void onPlayerInteract(PlayerInteractEvent event) {
-//        this.plugin.getGame().playerInteract(event);
-//    }
-    
+   public void onPlayerInteract(PlayerInteractEvent event) {
+       this.plugin.getGame().playerInteract(event);
+   }
+   
     /**
      * On inventory open.
-     * @param playerInteractEvent
+     * @param InventoryOpenEvent
      * @author kvnamo
      */
     @EventHandler
@@ -197,18 +184,19 @@ public class ACListener implements Listener{
         }
     }
     
-//    /**
-//     * On entity death
-//     * @param event
-//     * @author kvnamo
-//     */
-//    @EventHandler
-//    public void onEntityDeath(EntityDeathEvent event) {
-//        // Prevent mobs spawned from Pokeballs from dropping items or experience
-//        event.getDrops().clear();
-//        event.setDroppedExp(0);
-//    }
-//    
+    /**
+     * On entity death
+     * @param event
+     * @author kvnamo
+     */
+    @EventHandler
+    public void onEntityDeath(EntityDeathEvent event) {
+        // Prevent mobs spawned from Pokeballs from dropping items or experience
+        event.getDrops().clear();
+        event.setDroppedExp(3);
+        
+    }
+    
     /**
      * Call when a block breaks.
      * @param event

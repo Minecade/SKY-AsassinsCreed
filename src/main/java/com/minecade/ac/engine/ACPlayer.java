@@ -126,25 +126,6 @@ public class ACPlayer{
     public void setLives(int lives) {
         this.lives = lives;
     }
-    
-    private boolean inAir;
-
-    /**
-     * Gets the inAir
-     * @return inAir
-     * @author kunamo
-     */
-    public boolean isInAir() {
-        return inAir;
-    }
-
-    /**
-     * Sets the inAir
-     * @author kunamo
-     */
-    public void setInAir(boolean inAir) {
-        this.inAir = inAir;
-    }
 
     private boolean cooling;
     

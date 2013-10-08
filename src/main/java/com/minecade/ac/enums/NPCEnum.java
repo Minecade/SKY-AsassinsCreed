@@ -4,7 +4,7 @@ public enum NPCEnum {
 
     GREEN,
     
-    GREY,
+    GRAY,
     
     RED,
     

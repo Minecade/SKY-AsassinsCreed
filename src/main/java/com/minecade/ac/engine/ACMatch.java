@@ -7,9 +7,13 @@ import java.util.Map;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 
 import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.enums.MatchStatusEnum;
@@ -17,7 +21,6 @@ import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.ac.task.MatchTimerTask;
 import com.minecade.ac.world.ACWorld1;
 import com.minecade.engine.utils.EngineUtils;
-
 
 public class ACMatch {
   
@@ -32,8 +35,7 @@ public class ACMatch {
     private ACScoreboard acScoreboard;
     
     private Map<String, ACPlayer> players;
-    //private MatchTimerTask timerTask;
-    //private ReleasePrisionersTask releasePrisionersTask;
+    
     private List<ACPlayer> prisioners = new ArrayList<ACPlayer>();
     
     private MatchStatusEnum status = MatchStatusEnum.STOPPED;
@@ -99,12 +101,12 @@ public class ACMatch {
             
             // Set assassin
             if(i == 0){
+                player.getBukkitPlayer().teleport(this.acWorld.getShipLocation());
                 player.setCharacter(CharacterEnum.ASSASSIN);
                 ACCharacter.setupPlayer(player);
-                //TODO: player.getBukkitPlayer().teleport(destination);
             }
             // Set navy
-            //TODO: else player.getBukkitPlayer().teleport(destination);
+            else player.getBukkitPlayer().teleport(this.acWorld.getNavyLocation());
             
             this.players.put(player.getBukkitPlayer().getName(), player);
         }
@@ -135,6 +137,21 @@ public class ACMatch {
     private void finish(){
 
         // Remove all 
+        synchronized(this.players){
+            for(ACPlayer player : this.players.values()){
+                // TODO: Get winner and save in Database
+                
+                // Clear player
+                EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+                
+                player.setLives(0);
+                player.setCooling(false);
+                player.setCharacter(null);
+                player.setCurrentMatch(null);
+            }
+        }
+        
+        // Clear collections and task
         this.players.clear();
         this.prisioners.clear();
         this.timerTask.cancel();
@@ -145,33 +162,42 @@ public class ACMatch {
      * @param playerName
      * @author Kvnamo
      */
-    public void playerQuit(ACPlayer playerName) {
+    public void playerQuit(final ACPlayer playerName) {
         
         // Remove from players list
         ACPlayer player = this.players.get(playerName.getBukkitPlayer().getName());
         this.players.remove(playerName.getBukkitPlayer().getName());
         
-        if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-            // Save player stats
-            player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
-            player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.countdown);
-            this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
-
-            this.finish();
-        }
-        else{
-            // TODO: penalize the navy
-        }
+        // Save player stats
+        player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+        player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.countdown);
+        this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
+        
+        if(CharacterEnum.ASSASSIN.equals(player.getCharacter())) this.finish();
     }
     
     /**
-     * When the player dies
+     * On entity death
      * @param player
      * @param event
      * @author kvnamo
      */
-    public void playerDeath(final ACPlayer player) {
+    public void entityDeath(final EntityDeathEvent event, final ACPlayer player) {
+        
         player.setLives(player.getLives() - 1);
+
+        if(!CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+            
+            if(event.getEntity().getKiller() instanceof Player){
+                
+                ACPlayer assassin = this.players.get(event.getEntity().getKiller().getName());
+            
+                if(CharacterEnum.ASSASSIN.equals(assassin.getCharacter())){
+                    // Gains 2 levels when killing a player
+                    assassin.getBukkitPlayer().setExp(player.getBukkitPlayer().getExp() + 2);
+                }
+            }
+        }
     }
     
     /**
@@ -179,7 +205,7 @@ public class ACMatch {
      * @param event
      * @author: kvnamo
      */
-    public void playerRespawn(final ACPlayer player){
+    public void playerRespawn(final PlayerRespawnEvent event, final ACPlayer player){
         
         if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
             // Get current assassin lives
@@ -188,7 +214,7 @@ public class ACMatch {
             if(player.getLives() > 0){
                 ACCharacter.setupPlayer(player);
                 player.setLives(lives);
-                //TODO:player.getBukkitPlayer().teleport(this.);
+                event.setRespawnLocation(this.acWorld.getShipLocation());
             }
             else this.finish();  
         }
@@ -198,7 +224,7 @@ public class ACMatch {
             
             // Add to prision
             this.prisioners.add(player);
-            //TODO:player.getBukkitPlayer().teleport();
+            event.setRespawnLocation(this.acWorld.getKillBoxLocation());
             
             if(this.prisioners.size() == 1){
                 // Every 20 seconds everyone currently in the room gets teleported to the class select room 
@@ -213,6 +239,36 @@ public class ACMatch {
     }
     
     /**
+     * On entity damaged
+     * @param event
+     * @param player
+     * @author Kvnamo
+     */
+    public void entityDamage(final EntityDamageEvent event, final ACPlayer player) {
+        
+        // Falling will not damage
+        if(DamageCause.FALL.equals(event.getCause())){
+            event.setCancelled(true);
+            return;
+        }
+        else if(DamageCause.VOID.equals(event.getCause())){
+            player.getBukkitPlayer().setHealth(0.0D);
+            event.setCancelled(true);
+            return;
+        }
+        
+        // The assassin can get damaged by anyone
+        if(CharacterEnum.ASSASSIN.equals(player)) return;
+        
+        // Get enemy
+        final ACPlayer enemy = this.players.get(((Player)((EntityDamageByEntityEvent) event).getDamager()).getName());
+        
+        // The assassin can damaged anyone
+        if(CharacterEnum.ASSASSIN.equals(enemy)) return;
+        
+    }
+    
+    /**
      * Release prisioners from jail
      * @author Kvnamo
      */
@@ -220,7 +276,7 @@ public class ACMatch {
         
         synchronized (this.prisioners) {    
             for(ACPlayer player : this.prisioners){
-              //player.getBukkitPlayer().teleport();
+                player.getBukkitPlayer().teleport(this.acWorld.getNavyLocation());
             }
             
             this.prisioners.clear();
@@ -233,59 +289,41 @@ public class ACMatch {
      * @param event
      * @author kvnamo
      */
-    public void playerMove(final ACPlayer player, PlayerMoveEvent event) {
+    public void playerMove(final PlayerMoveEvent event, final ACPlayer player) {
         
         final Block block = event.getTo().getBlock();
         
         if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-            // Pressure plates on diamond blocks throughout the map give the assassin 1 level of experience
-            if(Material.DIAMOND_BLOCK.equals(block.getType())){
-                player.getBukkitPlayer().setExp(player.getBukkitPlayer().getExp() + 1);
-                block.setType(Material.SAND);
+            
+            if(MatchStatusEnum.RUNNING.equals(this.status)){
+                // Pressure plates on diamond blocks throughout the map give the assassin 1 level of experience
+                if(Material.DIAMOND_BLOCK.equals(block.getType())){
+                    player.getBukkitPlayer().setExp(player.getBukkitPlayer().getExp() + 1);
+                    block.setType(Material.SAND);
+                }
             }
         }
-        
-        if(!Material.AIR.equals(block.getRelative(BlockFace.DOWN).getType())){
-            player.setInAir(false);
-        }
-    }
-     
-    /**
-     * On player super jump
-     * @param player
-     * @author kvnamo
-     */
-    public void playerSuperJump(final ACPlayer player) {
-        
-        if(CharacterEnum.ASSASSIN.equals(player.getCharacter()) && !player.isInAir()){ 
-            
-            player.setInAir(true);
-            player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.IRONGOLEM_THROW, 3, -3);
-            player.getBukkitPlayer().setVelocity(player.getBukkitPlayer().getLocation().getDirection().multiply(0.15).setY(0.5));
-        }
+        else this.characterSelection(player);
     }
     
     /**
-     * Gains 2 levels when killing a player
+     * Character selection
      * @param player
-     * @author kvnamo 
+     * @author Kvnamo
      */
-    private void playerKill(final ACPlayer player){
+    private void characterSelection(final ACPlayer player){
         
-        if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-            player.getBukkitPlayer().setExp(player.getBukkitPlayer().getExp() + 2);
+        if(this.acWorld.getBodyguardLocation().equals(player.getBukkitPlayer().getLocation())){
+            player.setCharacter(CharacterEnum.BODYGUARD);
+            ACCharacter.setupPlayer(player);
         }
-    }
-    
-    /**
-     * Gains 3 levels when killing an NPC
-     * @param player
-     * @author kvnamo 
-     */
-    private void npcKill(final ACPlayer player){
-        
-        if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-            player.getBukkitPlayer().setExp(player.getBukkitPlayer().getExp() + 3);
+        else if(this.acWorld.getMusketeerLocation().equals(player.getBukkitPlayer().getLocation())){
+            player.setCharacter(CharacterEnum.MUSKETEER);
+            ACCharacter.setupPlayer(player);
+        }
+        else if(this.acWorld.getSwordsmanLocation().equals(player.getBukkitPlayer().getLocation())){
+            player.setCharacter(CharacterEnum.SWORDSMAN);
+            ACCharacter.setupPlayer(player);
         }
     }
 
@@ -334,4 +372,7 @@ public class ACMatch {
             player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);
         } 
     }
+
+
+
 }
