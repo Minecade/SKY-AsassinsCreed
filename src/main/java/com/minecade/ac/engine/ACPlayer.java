@@ -126,7 +126,7 @@ public class ACPlayer{
     public void setLives(int lives) {
         this.lives = lives;
     }
-
+    
     private boolean cooling;
     
     /**

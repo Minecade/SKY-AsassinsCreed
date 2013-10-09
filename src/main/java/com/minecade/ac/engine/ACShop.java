@@ -27,9 +27,9 @@ public class ACShop {
         else if(ACShop.getLocation(world, TopShopEnum.HEALTH.getX(), TopShopEnum.HEALTH.getY(), TopShopEnum.HEALTH.getZ()).equals(location)){
             ACShop.buyTopShop(player, TopShopEnum.HEALTH);
         }
-        else if(ACShop.getLocation(world, TopShopEnum.INVISIBILITY.getX(), TopShopEnum.INVISIBILITY.getY(), TopShopEnum.INVISIBILITY.getZ()).equals(location)){
-            ACShop.buyTopShop(player, TopShopEnum.INVISIBILITY);
-        }
+//        else if(ACShop.getLocation(world, TopShopEnum.INVISIBILITY.getX(), TopShopEnum.INVISIBILITY.getY(), TopShopEnum.INVISIBILITY.getZ()).equals(location)){
+//            ACShop.buyTopShop(player, TopShopEnum.INVISIBILITY);
+//        }
         else if(ACShop.getLocation(world, TopShopEnum.JUMP.getX(), TopShopEnum.JUMP.getY(), TopShopEnum.JUMP.getZ()).equals(location)){
             ACShop.buyTopShop(player, TopShopEnum.JUMP);
         }

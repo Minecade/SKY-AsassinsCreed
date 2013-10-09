@@ -112,7 +112,6 @@ public class ACPersistence extends MinecadePersistence {
             // create a new bean that is managed by bukkit
             playerModel = this.plugin.getDatabase().createEntityBean(PlayerModel.class);
             playerModel.setUsername(playerName); 
-            playerModel.setKills(0); 
             playerModel.setWins(0);
             playerModel.setLosses(0);
             playerModel.setLastSeen((new Date())); 

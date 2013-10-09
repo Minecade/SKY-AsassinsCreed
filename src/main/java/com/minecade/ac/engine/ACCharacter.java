@@ -28,8 +28,7 @@ public class ACCharacter {
                 player.setLives(3);
              
                 // Set potions
-                player.getBukkitPlayer().setExp(1);
-                player.getBukkitPlayer().getInventory().addItem(ACInventory.getInvisibleMeca());
+                player.getBukkitPlayer().getInventory().addItem(ACInventory.getInvisibleEmerald());
                 player.getBukkitPlayer().sendMessage(String.format("%You are the Assassin!", ChatColor.RED));
                 break;
             
@@ -81,16 +80,16 @@ public class ACCharacter {
 
     /**
      * Setup zombie
+     * @param creature
      * @param zombie
-     * @param npc
      * @author Kvnamo
      */
     public static void setupZombie(Zombie zombie, NPCEnum npc){
         
-        // TODO: how to set a steve head?
-        
-        // Set health
+        // Set characteristics
         zombie.setHealth(30);
+        zombie.setTarget(null);
+        zombie.setCustomName(npc.name());
         
         // Set equipment
         EntityEquipment equipment = zombie.getEquipment();

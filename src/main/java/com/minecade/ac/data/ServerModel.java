@@ -32,28 +32,6 @@ public class ServerModel {
         this.serverId = serverId;
     }
     
-//    @Enumerated(EnumType.STRING)
-//    @Column(name = "status", nullable = false)
-//    private PMSStatusEnum status = PMSStatusEnum.WAITING_FOR_PLAYERS;
-    
-//    /**
-//     * Get status
-//     * @return the state
-//     * @author Kvnamo
-//     */
-//    public PMSStatusEnum getStatus() {
-//        return status;
-//    }
-//
-//    /**
-//     * Set status
-//     * @param state 
-//     * @author Kvnamo
-//     */
-//    public void setStatus(PMSStatusEnum status) {
-//        this.status = status;
-//    }
-    
     @Column(name = "max_players", nullable = false)
     private int maxPlayers;
     

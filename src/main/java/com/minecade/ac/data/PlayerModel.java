@@ -61,27 +61,6 @@ public class PlayerModel {
         this.username = username;
     }
     
-    @Column(name = "kills", nullable = false)
-    private int kills;
-    
-    /**
-     * Get kills
-     * @return kills
-     * @author Kvnamo
-     */
-    public int getKills() {
-        return kills;
-    }
-
-    /**
-     * Set kills
-     * @param kills
-     * @author Kvnamo
-     */
-    public void setKills(int kills) {
-        this.wins = kills;
-    }
-    
     @Column(name = "wins", nullable = false)
     private int wins;
     

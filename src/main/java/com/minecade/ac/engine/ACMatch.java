@@ -4,10 +4,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Zombie;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
@@ -17,6 +22,7 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 
 import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.enums.MatchStatusEnum;
+import com.minecade.ac.enums.NPCEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.ac.task.MatchTimerTask;
 import com.minecade.ac.world.ACWorld1;
@@ -30,9 +36,11 @@ public class ACMatch {
     
     private int countdown;
     
-    private MatchTimerTask timerTask;
+    private int npcs;
     
     private ACScoreboard acScoreboard;
+    
+    private MatchTimerTask timerTask;
     
     private Map<String, ACPlayer> players;
     
@@ -50,7 +58,7 @@ public class ACMatch {
     }
     
     private ACWorld1 acWorld;
-    
+
     /**
      * Get assassins creed world
      * @param world
@@ -87,30 +95,60 @@ public class ACMatch {
      */
     public void init(List<ACPlayer> players){
         
-        // Start game timer.
-        if(this.timerTask != null) this.timerTask.cancel();
-        this.timerTask = new MatchTimerTask(this, 10);
-        this.timerTask.runTaskTimer(plugin, 10, 20l);
+        // Set match scoreboard
+        if(this.acScoreboard == null)  this.acScoreboard = new ACScoreboard(this.plugin);
+        this.acScoreboard.init();
         
-        // Set player characteristics.
+        // Load players
         ACPlayer player;
         
         for (int i = 0; i < players.size(); i++) {
             // Get player
             player = players.get(i);
             
+            // Setup player scoreboard
+            this.acScoreboard.assignTeam(player);
+            player.getBukkitPlayer().setScoreboard(this.acScoreboard.getScoreboard());
+            
             // Set assassin
             if(i == 0){
+                
+                // Start timer.
+                if(this.timerTask != null) this.timerTask.cancel();
+                this.timerTask = new MatchTimerTask(this, player.getBukkitPlayer(), 10);
+                this.timerTask.runTaskTimer(this.plugin, 10, 20l);
+                
                 player.getBukkitPlayer().teleport(this.acWorld.getShipLocation());
                 player.setCharacter(CharacterEnum.ASSASSIN);
                 ACCharacter.setupPlayer(player);
+                
+                // Setup assassin scoreboard lives
+                this.acScoreboard.setAssassinLives(player.getLives());
             }
             // Set navy
             else player.getBukkitPlayer().teleport(this.acWorld.getNavyLocation());
             
             this.players.put(player.getBukkitPlayer().getName(), player);
         }
+        
+        // Load npc.
+        NPCEnum npc;
+        Location location;
+        this.npcs = NPCEnum.values().length;
 
+        for (int i = 0; i < this.npcs; i++) {
+            npc = NPCEnum.values()[i];
+            location = this.getACWorld().getNPCLocation(npc);
+            
+            // Spawn npc
+            ACCharacter.setupZombie((Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE), npc);
+        }
+        
+        // Set match scoreboard
+        this.acScoreboard.setNavy(this.players.size() - 1);
+        this.acScoreboard.setNPCs(this.npcs);
+        this.acScoreboard.setPrisioners(0);
+                    
         // Set match status
         this.status = MatchStatusEnum.READY;
     }
@@ -121,25 +159,78 @@ public class ACMatch {
      */
     public void start(){
         
-        //Match timer
-        if(this.timerTask != null) this.timerTask.cancel();
-        this.timerTask = new MatchTimerTask(this, 10);
-        this.timerTask.runTaskTimer(plugin, 10, 20l);
-        
+        // Start timer
+        synchronized(this.players){
+            for(ACPlayer player : this.players.values()){
+                
+                // Get assassin
+                if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                    //Match timer
+                    if(this.timerTask != null) this.timerTask.cancel();
+                    this.timerTask = new MatchTimerTask(this, player.getBukkitPlayer(), this.time);
+                    this.timerTask.runTaskTimer(plugin, 10, 20l);
+                }
+            }
+        }
+
         // Set match status
         this.status = MatchStatusEnum.RUNNING;
+        
+        // Announce match started
+        this.broadcastMessage(String.format("%sMatch started!", ChatColor.RED));
     }
     
     /**
      * Finish match
      * @author kvnamo
      */
-    private void finish(){
+    public void finish(){
 
-        // Remove all 
+        // Start finish match timer.
+        this.plugin.getServer().getScheduler().scheduleSyncDelayedTask(this.plugin, new Runnable() {
+            @Override
+            public void run() {
+                // Get game
+                ACGame game = ACMatch.this.plugin.getGame();
+
+                synchronized(ACMatch.this.players){
+                    for(ACPlayer player : ACMatch.this.players.values()){
+                        player.getBukkitPlayer().teleport(game.getLobbyLocation());
+                    }
+                }
+                
+                // Clear collections and task
+                ACMatch.this.players.clear();
+            }
+        }, 100L);
+        
         synchronized(this.players){
             for(ACPlayer player : this.players.values()){
-                // TODO: Get winner and save in Database
+                
+                // Get winner and save in Database
+                if(CharacterEnum.ASSASSIN.equals(player.getCharacter()) && player.getLives() > 0){
+                    
+                    // Set a win if the assassin killed every target
+                    if(this.npcs == 0){
+                        // Update Butter Coins in central DB
+                        addButterCoins(player.getBukkitPlayer().getName(), 5);
+                        player.getPlayerModel().setWins(player.getPlayerModel().getWins() + 1);
+                    }
+                    else player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+                }
+                else{
+                    // Set a win for the navy if at least one target (npc) is alive
+                    if(this.npcs > 0){
+                        // Update Butter Coins in central DB
+                        addButterCoins(player.getBukkitPlayer().getName(), 5);
+                        player.getPlayerModel().setWins(player.getPlayerModel().getWins() + 1);
+                    }
+                    else player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+                }
+                
+                // Update player in database
+                player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + (this.time - this.countdown));
+                this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
                 
                 // Clear player
                 EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
@@ -152,9 +243,12 @@ public class ACMatch {
         }
         
         // Clear collections and task
-        this.players.clear();
         this.prisioners.clear();
         this.timerTask.cancel();
+        this.acScoreboard = null;
+        
+        // Announce finish
+        this.broadcastMessage(String.format("%sMatch finished! The %s wins!", ChatColor.YELLOW, this.npcs == 0 ? "Assassin" : "Navy"));
     }
     
     /**
@@ -177,27 +271,60 @@ public class ACMatch {
     }
     
     /**
-     * On entity death
+     * On player death
      * @param player
      * @param event
      * @author kvnamo
      */
-    public void entityDeath(final EntityDeathEvent event, final ACPlayer player) {
+    public void playerDeath(final EntityDeathEvent event, final ACPlayer player) {
         
         player.setLives(player.getLives() - 1);
-
-        if(!CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+        
+        if(event.getEntity().getKiller() instanceof Player){
             
-            if(event.getEntity().getKiller() instanceof Player){
+            ACPlayer killer = this.players.get(event.getEntity().getKiller().getName());
+            
+            if(CharacterEnum.ASSASSIN.equals(killer.getCharacter())){
+                // Gains 2 levels when killing a player
+                killer.getBukkitPlayer().setExp(killer.getBukkitPlayer().getExp() + 2);
                 
-                ACPlayer assassin = this.players.get(event.getEntity().getKiller().getName());
-            
-                if(CharacterEnum.ASSASSIN.equals(assassin.getCharacter())){
-                    // Gains 2 levels when killing a player
-                    assassin.getBukkitPlayer().setExp(player.getBukkitPlayer().getExp() + 2);
-                }
+                // Announce navy kill
+                this.broadcastMessage(String.format("%sTown Crier: %s%s %sfrom Navy was sent to prision!", 
+                    ChatColor.RED, ChatColor.BLUE, player.getBukkitPlayer().getName(), ChatColor.RED));
             }
+            
+            // Update butter coins
+            addButterCoins(killer.getBukkitPlayer().getName(), 1);
         }
+    }
+    
+    /**
+     *  On npc death
+     * @param event
+     * @param zombie
+     * @author Kvnamo
+     */
+    public void npcDeath(final EntityDeathEvent event, final Zombie zombie, final ACPlayer killer){
+        
+        // Update scoreboard
+        this.acScoreboard.setNPCs(this.npcs--);
+      
+        // If all targets were killed, finish the match.
+        if(this.npcs > 0){
+            // Add 30 seconds to match
+            this.timeLeft(this.countdown + 30);
+            
+            // Get killer
+            if(CharacterEnum.ASSASSIN.equals(killer.getCharacter())){
+                // Gains 2 levels when killing a player
+                killer.getBukkitPlayer().setExp(killer.getBukkitPlayer().getExp() + 3);
+            }
+            
+            // Announce npc kill
+            this.broadcastMessage(String.format("%sTown Crier: the %s lord is death! %s 30 seconds added to the match!", 
+                ChatColor.RED, zombie.getCustomName(), ChatColor.YELLOW));
+        }
+        else this.finish();
     }
     
     /**
@@ -215,6 +342,9 @@ public class ACMatch {
                 ACCharacter.setupPlayer(player);
                 player.setLives(lives);
                 event.setRespawnLocation(this.acWorld.getShipLocation());
+                
+                // Update scoreboard
+                this.acScoreboard.setAssassinLives(lives);
             }
             else this.finish();  
         }
@@ -225,6 +355,10 @@ public class ACMatch {
             // Add to prision
             this.prisioners.add(player);
             event.setRespawnLocation(this.acWorld.getKillBoxLocation());
+            
+            // Update scoreboard
+            this.acScoreboard.setPrisioners(this.prisioners.size());
+            this.acScoreboard.setNavy((this.players.size() - 1) - this.prisioners.size());
             
             if(this.prisioners.size() == 1){
                 // Every 20 seconds everyone currently in the room gets teleported to the class select room 
@@ -239,12 +373,12 @@ public class ACMatch {
     }
     
     /**
-     * On entity damaged
+     * On player damaged
      * @param event
      * @param player
      * @author Kvnamo
      */
-    public void entityDamage(final EntityDamageEvent event, final ACPlayer player) {
+    public void playerDamage(final EntityDamageEvent event, final ACPlayer player) {
         
         // Falling will not damage
         if(DamageCause.FALL.equals(event.getCause())){
@@ -258,14 +392,35 @@ public class ACMatch {
         }
         
         // The assassin can get damaged by anyone
-        if(CharacterEnum.ASSASSIN.equals(player)) return;
+        if(CharacterEnum.ASSASSIN.equals(player.getCharacter())) return;
         
         // Get enemy
         final ACPlayer enemy = this.players.get(((Player)((EntityDamageByEntityEvent) event).getDamager()).getName());
         
         // The assassin can damaged anyone
-        if(CharacterEnum.ASSASSIN.equals(enemy)) return;
+        if(CharacterEnum.ASSASSIN.equals(enemy.getCharacter())) return;
         
+        event.setCancelled(true);
+    }
+    
+    /**
+     * On zombie damaged
+     * @param event
+     * @param player
+     * @author Kvnamo
+     */
+    public void npcDamage(final EntityDamageEvent event, final ACPlayer damager) {
+        
+        // Falling will not damage
+        if(DamageCause.FALL.equals(event.getCause())){
+            event.setCancelled(true);
+            return;
+        }
+        
+        // The assassin can damaged zombies
+        if(CharacterEnum.ASSASSIN.equals(damager.getCharacter())) return;
+        
+        event.setCancelled(true);
     }
     
     /**
@@ -326,35 +481,6 @@ public class ACMatch {
             ACCharacter.setupPlayer(player);
         }
     }
-
-    /**
-     * Show player 
-     * @param player
-     * @author kvnamo
-     */
-    public void showPlayer(Player bukkitPlayer){
-        
-        synchronized(this.players){
-            for (ACPlayer player : this.players.values()) {
-                player.getBukkitPlayer().showPlayer(bukkitPlayer);
-            }
-        }
-    }
-    
-    /**
-     * Hide player
-     * @param players
-     * @param spectator
-     * @author kvnamo
-     */
-    public void hidePlayer(Player bukkitPlayer){
-        
-        synchronized (this.players) {
-            for (ACPlayer player : this.players.values()) {
-                player.getBukkitPlayer().hidePlayer(bukkitPlayer);
-            }
-        }
-    }
     
     /**
      * Lobby time left to start a match
@@ -373,6 +499,46 @@ public class ACMatch {
         } 
     }
 
-
-
+    /**
+     * Hide player 
+     * @param player
+     * @author kvnamo
+     */
+    public void hidePlayer(Player bukkitPlayer, boolean hide){
+        
+        synchronized(this.players){
+            for (ACPlayer player : this.players.values()) {
+                if(hide) player.getBukkitPlayer().hidePlayer(bukkitPlayer);
+                else player.getBukkitPlayer().showPlayer(bukkitPlayer);
+            }
+        }
+    }
+    
+    /**
+     * Add butter coins in sky central db
+     * @param playerName
+     * @param butterCoins
+     */
+    private void addButterCoins(final String playerName, final int butterCoins){
+        // Update Butter Coins in central DB
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+            @Override
+            public void run() {
+                ACMatch.this.plugin.getPersistence().addButterCoins(playerName, butterCoins);
+            }
+        });
+    }
+    
+    /**
+     * Broadcast lobby players message
+     * @param format
+     * @author Kvnamo
+     */
+    private void broadcastMessage(String message) {
+        
+        // Send message only to players in lobby
+        for (ACPlayer player : this.players.values()) {
+            player.getBukkitPlayer().sendMessage(message);
+        }
+    }
 }

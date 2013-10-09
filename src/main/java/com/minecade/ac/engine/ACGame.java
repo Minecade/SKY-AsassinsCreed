@@ -9,6 +9,7 @@ import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Zombie;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
@@ -24,6 +25,7 @@ import org.bukkit.inventory.ItemStack;
 import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.enums.MatchStatusEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
+import com.minecade.ac.task.InvisibilityTask;
 import com.minecade.ac.task.LobbyTimerTask;
 import com.minecade.ac.world.ACWorld1;
 import com.minecade.engine.utils.EngineUtils;
@@ -42,9 +44,7 @@ public class ACGame {
     
     private LobbyTimerTask timerTask;
     
-    private int matchRequiredPlayers;
-    
-    private Location lobbyLocation;
+    private int matchRequiredPlayers;  
 
     private List<ACMatch> matches;
     
@@ -57,6 +57,17 @@ public class ACGame {
     private int vipPlayers;
 
     private int countdown; 
+    
+    private Location lobbyLocation;
+    
+    /**
+     * return lobby location in game.
+     * @return
+     * @author Kvnamo
+     */
+    public Location getLobbyLocation(){
+        return lobbyLocation;
+    }
     
     /**
      * ACGame constructor
@@ -93,7 +104,7 @@ public class ACGame {
 
         // World can't be empty
         if (world == null){
-            this.plugin.getServer().getLogger().severe("PMSMatch initWorld: world parameter is null");
+            this.plugin.getServer().getLogger().severe("initWorld: world parameter is null");
             return;
         }  
         
@@ -161,7 +172,7 @@ public class ACGame {
         ACMatch match = null;
         
         synchronized(this.matches){ 
-            // Load all posible matches
+            // FIXME Load all posible matches
             if(this.matches.size() < this.serverMatches){
                 match = new ACMatch(this.plugin);
                 match.setACWorld(new ACWorld1(this.plugin));
@@ -188,7 +199,7 @@ public class ACGame {
                         player.setCurrentMatch(match);
                         this.nextMatchPlayers.add(player);
                         
-                        // Announce next match player
+                        // if match players is reached break
                         if(this.nextMatchPlayers.size() == this.matchRequiredPlayers) break;
                     }
                 }
@@ -269,10 +280,19 @@ public class ACGame {
             
             // If the player is in the lobby do nothing
             if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
-                match.entityDeath(event, player);
+                match.playerDeath(event, player);
             }
         }
-        //else TODO When an NPC is killed, 30 seconds of game time is added
+        else if (event.getEntity() instanceof Zombie && event.getEntity().getKiller() instanceof Player){
+            
+            final ACPlayer killer = this.players.get(((Player)event.getEntity().getKiller()).getName());
+            final ACMatch match = killer.getCurrentMatch();
+            
+            // If the player is in the lobby do nothing
+            if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
+                match.npcDeath(event, (Zombie)event.getEntity(), killer);
+            }
+        }
     }
     
     /**
@@ -307,7 +327,7 @@ public class ACGame {
             
             // If the player is in a match
             if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
-                match.entityDamage(event, player);
+                match.playerDamage(event, player);
                 return;
             } 
             
@@ -317,6 +337,15 @@ public class ACGame {
             }
             
             event.setCancelled(true);
+        }
+        else if (event.getEntity() instanceof Zombie && event.getEntity().getLastDamageCause() instanceof Player){
+            final ACPlayer damager = this.players.get(((Player)event.getEntity().getLastDamageCause()).getName());
+            final ACMatch match = damager.getCurrentMatch();
+            
+            // If the player is in the lobby do nothing
+            if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
+                match.npcDamage(event, damager);
+            }
         }
     } 
     
@@ -353,6 +382,17 @@ public class ACGame {
             if(ACInventory.getLeaveCompass().getType().equals(itemInHand.getType())){
                 EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
                 return;
+            }
+            else if(ACInventory.getInvisibleEmerald().getType().equals(itemInHand.getType())){
+                final ACPlayer player = this.players.get(bukkitPlayer.getName());
+                final ACMatch match = player.getCurrentMatch();
+                
+                if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) && 
+                    CharacterEnum.ASSASSIN.equals(player.getCharacter()) && !player.isCooling()){
+                    
+                    // Start invisibility.
+                    new InvisibilityTask(player, 1).runTaskTimer(plugin, 10, 200l);
+                }
             }
         }
         else if(Action.RIGHT_CLICK_BLOCK.equals(event.getAction())){
@@ -429,5 +469,4 @@ public class ACGame {
             }
         }
     }
-
 }

@@ -38,11 +38,11 @@ public class InvisibilityTask extends BukkitRunnable{
         // Validate assassin is not cooling down
         if(!this.player.isCooling()){
             this.player.setCooling(true);
-            this.player.getCurrentMatch().hidePlayer(this.player.getBukkitPlayer());
+            this.player.getCurrentMatch().hidePlayer(this.player.getBukkitPlayer(), true);
         }
         // 1 is equal to 10 seconds
         else if(this.coolingTime == invisibilityTime){
-            this.player.getCurrentMatch().showPlayer(this.player.getBukkitPlayer());
+            this.player.getCurrentMatch().hidePlayer(this.player.getBukkitPlayer(), false);
         }
         // 3 is equal to 30 seconds
         else if(this.coolingTime == 3){

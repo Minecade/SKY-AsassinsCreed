@@ -207,7 +207,7 @@ public class ACInventory {
         BookMeta bookMeta = (BookMeta) book.getItemMeta();
         bookMeta.setTitle(ChatColor.WHITE + "Instructions book");
         bookMeta.setPages(
-            String.format("%s%sWELCOME TO TNT RUN! \n\n\n%s" +
+            String.format("%s%sWELCOME TO Assassin's Creed IV: Black Flag! \n\n\n%s" +
                 "Run all over the map to destroy the blocks so other players fall into the void. Last player remaining wins the game.", 
                 ChatColor.BOLD, ChatColor.RED, ChatColor.DARK_GRAY),
             String.format("%s%sRULES! \n\n\n %s1. Diamond blocks gives you double jumps like XP points.\n" +
@@ -221,17 +221,17 @@ public class ACInventory {
     }
     
     /**
-     * Invisible meca
-     * @return Invisible Meca.
+     * Invisible emerald
+     * @return Invisible emerald.
      * @author kvnamo
      */
-    public static ItemStack getInvisibleMeca() {
+    public static ItemStack getInvisibleEmerald() {
         
         final ItemStack invisibleMeca = new ItemStack(Material.EMERALD, 1);
         
         ItemMeta invisibleMecaMeta = (ItemMeta) invisibleMeca.getItemMeta();
-        invisibleMecaMeta.setDisplayName(ChatColor.WHITE + "Invisible Meca");            
-        invisibleMecaMeta.setLore(Arrays.asList(ChatColor.GRAY + "10 seconds of invisivility"));          
+        invisibleMecaMeta.setDisplayName(ChatColor.WHITE + "Invisible Emerald");            
+        invisibleMecaMeta.setLore(Arrays.asList(ChatColor.GRAY + "10 - 20 seconds of invisivility"));          
         invisibleMeca.setItemMeta(invisibleMecaMeta);
         
         return invisibleMeca;
@@ -328,18 +328,13 @@ public class ACInventory {
         final BookMeta statsMeta = (BookMeta) stats.getItemMeta();
         statsMeta.setTitle(ChatColor.WHITE + "Stats book");
         
-        DecimalFormat decimalFormat = new DecimalFormat("0.000");
-        String kdr = (double)player.getPlayerModel().getLosses() != 0 ? 
-            "0" : decimalFormat.format((double)player.getPlayerModel().getKills() / (double)player.getPlayerModel().getLosses());
-        String timePlayed = decimalFormat.format((double)player.getPlayerModel().getTimePlayed() / (double)86400);
+        String timePlayed = new DecimalFormat("0.000").format((double)player.getPlayerModel().getTimePlayed() / (double)86400);
         
         statsMeta.setPages(
-                String.format("%s%s%s STATS! \n\n\n%s %sWins: %s%s\n %sLooses: %s%s\n %sKills: %s%s\n %sKill/Death ratio: %s%s\n %sTime played: %s%s days.",
+                String.format("%s%s%s STATS! \n\n\n%s %sWins: %s%s\n %sLooses: %s%s\n %sTime played: %s%s days.",
                 ChatColor.BOLD, ChatColor.LIGHT_PURPLE, player.getBukkitPlayer().getName().toUpperCase(), ChatColor.DARK_GRAY,
                 ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getWins(),
                 ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getLosses(),
-                ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getKills(),
-                ChatColor.BOLD, ChatColor.DARK_GRAY, kdr,
                 ChatColor.BOLD, ChatColor.DARK_GRAY, timePlayed));
         stats.setItemMeta(statsMeta);
         
@@ -394,34 +389,31 @@ public class ACInventory {
      * @return zombie armor content.
      * @author kvnamo
      */
-    public static ItemStack[] getZombieArmor(Color green) {      
+    public static ItemStack[] getZombieArmor(Color color) { 
 
         final ItemStack[] armor = new ItemStack[4];
         
-        final ItemStack helmet = new ItemStack(Material.LEATHER_HELMET, 1);
-        final LeatherArmorMeta helmetMeta = (LeatherArmorMeta) helmet.getItemMeta();
-        helmetMeta.setColor(green);      
-        helmet.setItemMeta(helmetMeta);
-                
-        armor[3] = helmet;
+        // A steve head
+        final ItemStack head = new ItemStack(Material.SKULL_ITEM, 1, (short) 3);    
+        armor[3] = head;
         
         final ItemStack chestplate = new ItemStack(Material.LEATHER_CHESTPLATE, 1);
         final LeatherArmorMeta chestplateMeta = (LeatherArmorMeta) chestplate.getItemMeta();
-        chestplateMeta.setColor(green);
+        chestplateMeta.setColor(color);
         chestplate.setItemMeta(chestplateMeta);
         
         armor[2] = chestplate;
         
         final ItemStack leggings = new ItemStack(Material.LEATHER_LEGGINGS, 1);
         final LeatherArmorMeta leggingsMeta = (LeatherArmorMeta) leggings.getItemMeta();
-        leggingsMeta.setColor(green);
+        leggingsMeta.setColor(color);
         leggings.setItemMeta(leggingsMeta);
         
         armor[1] = leggings;
         
         final ItemStack boots = new ItemStack(Material.LEATHER_BOOTS, 1);
         final LeatherArmorMeta bootsMeta = (LeatherArmorMeta) boots.getItemMeta(); 
-        bootsMeta.setColor(green);
+        bootsMeta.setColor(color);
         boots.setItemMeta(bootsMeta);
         
         armor[0] = boots;
