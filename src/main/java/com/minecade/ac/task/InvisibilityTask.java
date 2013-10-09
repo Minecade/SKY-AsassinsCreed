@@ -8,7 +8,9 @@ import com.minecade.ac.enums.CharacterEnum;
 public class InvisibilityTask extends BukkitRunnable{
 
     final private ACPlayer player;
+    
     private int invisibilityTime;
+    
     private int coolingTime;
     
     /**

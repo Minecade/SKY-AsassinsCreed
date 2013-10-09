@@ -10,6 +10,6 @@ public class ACWorld4 extends ACWorld {
      * @author Kvnamo
      */
     public ACWorld4(MinecadePlugin plugin) {
-        super(plugin);
+        super(plugin, 4);
     }
 }

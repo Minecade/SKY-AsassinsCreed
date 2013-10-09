@@ -9,7 +9,9 @@ import com.minecade.ac.enums.MatchStatusEnum;
 public class MatchTimerTask extends BukkitRunnable{
 
     private ACMatch match;
+    
     private Player assassin;
+    
     private int countdown;
     
     /**

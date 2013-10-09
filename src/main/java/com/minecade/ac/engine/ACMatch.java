@@ -40,11 +40,11 @@ public class ACMatch {
     
     private ACScoreboard acScoreboard;
     
-    private MatchTimerTask timerTask;
-    
     private Map<String, ACPlayer> players;
     
     private List<ACPlayer> prisioners = new ArrayList<ACPlayer>();
+    
+    private MatchTimerTask timerTask;
     
     private MatchStatusEnum status = MatchStatusEnum.STOPPED;
     

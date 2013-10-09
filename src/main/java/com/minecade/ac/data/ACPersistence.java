@@ -10,6 +10,7 @@ import com.minecade.engine.data.MinecadePersistence;
 public class ACPersistence extends MinecadePersistence { 
 
     private final AssassinsCreedPlugin plugin;
+    
     private int lastPlayerCount;
 
     /**

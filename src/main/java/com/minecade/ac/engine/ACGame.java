@@ -40,35 +40,33 @@ public class ACGame {
 
     private final AssassinsCreedPlugin plugin;
     
-    private List<ACPlayer> nextMatchPlayers;
-    
-    private Map<String, ACPlayer> players;
-    
-    private ACScoreboard acScoreboard;
-    
-    private LobbyTimerTask timerTask;
-    
-    private int matchRequiredPlayers;  
-
-    private List<ACMatch> matches;
-
-    private Location lobby;
-    
     private int maxPlayers;
 
     private int vipPlayers;
 
     private int matchCountdown; 
     
-    private Location lobbyLocation;
+    private int matchRequiredPlayers;  
     
+    private Location lobby;
+    
+    private ACScoreboard acScoreboard;
+    
+    private List<ACMatch> matches;
+    
+    private Map<String, ACPlayer> players;
+    
+    private List<ACPlayer> nextMatchPlayers;
+    
+    private LobbyTimerTask timerTask;
+
     /**
      * return lobby location in game.
      * @return
      * @author Kvnamo
      */
     public Location getLobbyLocation(){
-        return lobbyLocation;
+        return lobby;
     }
     
     /**
@@ -152,7 +150,7 @@ public class ACGame {
             
             // Add player to players collection
             this.players.put(bukkitPlayer.getName(), player);
-            bukkitPlayer.teleport(this.lobbyLocation); 
+            bukkitPlayer.teleport(this.lobby); 
 
             // Start a match if there are enough players
             if(this.players.size() >= this.matchRequiredPlayers){
@@ -301,7 +299,7 @@ public class ACGame {
         if (match != null && !MatchStatusEnum.STOPPED.equals(match.getStatus())){
             match.playerRespawn(event, player);
         }
-        else event.setRespawnLocation(this.lobbyLocation); 
+        else event.setRespawnLocation(this.lobby); 
     }
     
     /**
@@ -325,7 +323,7 @@ public class ACGame {
             
             // If the player is in the lobby do nothing
             if(DamageCause.VOID.equals(event.getCause())){
-                event.getEntity().teleport(this.lobbyLocation);
+                event.getEntity().teleport(this.lobby);
             }
             
             event.setCancelled(true);

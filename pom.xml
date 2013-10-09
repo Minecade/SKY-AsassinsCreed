@@ -13,7 +13,7 @@
   
   <properties>
     <minecade.engine.version>0.0.1-SNAPSHOT</minecade.engine.version>
-    <main.class>com.minecade.ac.plugin.AssasinsCreedPlugin</main.class>
+    <main.class>com.minecade.ac.plugin.AssassinsCreedPlugin</main.class>
   </properties>
 
   <dependencies>
