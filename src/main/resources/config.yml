@@ -20,15 +20,13 @@ lobby:
         z: 1 
         yaw: 92    
         pitch: 3
-        world: pmslobby
-    start-countdown: 10 # Time to begin each match
+        world: aclobby
 
 # Match
 match:
-    ready-countdown: 10 # The time to wait until all users are ready to start the match.
-    required-players: 4 # Minimun Players needed to start the match.
-    start-countdown: 30 # The time in seconds to wait when the MATCH_PLAYERS limit reached to start the match.
-    time: 600 # Match duration time in seconds.
+    required-players: 6 # Minimun Players needed to start the match.
+    start-countdown: 10 # Time to begin each match
+    time: 360 # Match duration time in seconds (5 minutes).
    
 # Server
 server:
@@ -40,8 +38,8 @@ server:
     ban-message: 'You have been banned from sky servers. Appeal at http://skydoesminecraft.com/'
     id: 1
     full-message: 'The server if full, visit skydoesminecraft.com/shop to purchase VIP!'
-    max-players: 20 # Match players in the server.
-    max-vip-players: 24 # Match players in the server.        
+    max-players: 24 # Match players in the server.
+    max-vip-players: 30 # Match players in the server.        
     name: 'AC Server 1'
    
    

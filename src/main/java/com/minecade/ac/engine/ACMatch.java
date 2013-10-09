@@ -25,7 +25,7 @@ import com.minecade.ac.enums.MatchStatusEnum;
 import com.minecade.ac.enums.NPCEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.ac.task.MatchTimerTask;
-import com.minecade.ac.world.ACWorld1;
+import com.minecade.ac.world.ACWorld;
 import com.minecade.engine.utils.EngineUtils;
 
 public class ACMatch {
@@ -57,14 +57,14 @@ public class ACMatch {
         return this.status;
     }
     
-    private ACWorld1 acWorld;
+    private ACWorld acWorld;
 
     /**
      * Get assassins creed world
      * @param world
      * @author Kvnamo
      */
-    public ACWorld1 getACWorld(){
+    public ACWorld getACWorld(){
         return this.acWorld;
     }
     
@@ -73,19 +73,19 @@ public class ACMatch {
      * @param world
      * @author Kvnamo
      */
-    public void setACWorld(ACWorld1 acWorld){
+    public void setACWorld(ACWorld acWorld){
         this.acWorld = acWorld;
     }
     
     /**
      * ACMatch constructor
      * @param plugin
-     * @param time
+     * @param acWorld
      * @author Kvnamo
      */
-    public ACMatch(AssassinsCreedPlugin plugin){
+    public ACMatch(AssassinsCreedPlugin plugin, ACWorld acWorld){
         this.plugin = plugin;
-        this.time = plugin.getConfig().getInt("match.time");
+        this.acWorld = acWorld;
     }
     
     /**
@@ -94,6 +94,8 @@ public class ACMatch {
      * @author Kvnamo
      */
     public void init(List<ACPlayer> players){
+        
+        this.time = plugin.getConfig().getInt("match.time");
         
         // Set match scoreboard
         if(this.acScoreboard == null)  this.acScoreboard = new ACScoreboard(this.plugin);

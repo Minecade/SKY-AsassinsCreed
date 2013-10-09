@@ -202,19 +202,21 @@ public class ACInventory {
      */
     public static ItemStack getInstructionsBook(){
         
-        final ItemStack book = new ItemStack(Material.WRITTEN_BOOK, 1);
+        final ItemStack book = new ItemStack(Material.WRITTEN_BOOK, 1);        
         
         BookMeta bookMeta = (BookMeta) book.getItemMeta();
         bookMeta.setTitle(ChatColor.WHITE + "Instructions book");
         bookMeta.setPages(
             String.format("%s%sWELCOME TO Assassin's Creed IV: Black Flag! \n\n\n%s" +
-                "Run all over the map to destroy the blocks so other players fall into the void. Last player remaining wins the game.", 
-                ChatColor.BOLD, ChatColor.RED, ChatColor.DARK_GRAY),
-            String.format("%s%sRULES! \n\n\n %s1. Diamond blocks gives you double jumps like XP points.\n" +
-                "2. Gold blocks gives you speed boost.\n" +
-                "3. TNT blocks drops all block around it.\n" +
-                "4. If you quit during a match it will count as a lost",
-                ChatColor.BOLD, ChatColor.RED, ChatColor.DARK_GRAY));
+                "One person plays as the assassin, his aim is to eliminate the 5 NPCs in the map, " +
+                "each one is found in one of the 5 buildings...", ChatColor.BOLD, ChatColor.RED, ChatColor.DARK_GRAY),
+            String.format("%s\n The other players play as the Royal Navy, and must defend them! " +
+                "The assassin has 6 minutes to complete his contract or else he fails...", ChatColor.DARK_GRAY),
+            String.format("%s\n Dotted around the map are stashs of loot that the assassin can collect to buy more " +
+            		"powerful upgrades. He also earns money slowly over time and for every kill he commits...", ChatColor.DARK_GRAY),
+            String.format("%s\n The assassin has 3 lives, the Navy have unlimited, but stay dead for a long time. " +
+        		"Only 1 NPC has to be alive at the end for the assassin to fail.", ChatColor.DARK_GRAY));
+        
         book.setItemMeta(bookMeta);
         
         return book;
@@ -332,7 +334,7 @@ public class ACInventory {
         
         statsMeta.setPages(
                 String.format("%s%s%s STATS! \n\n\n%s %sWins: %s%s\n %sLooses: %s%s\n %sTime played: %s%s days.",
-                ChatColor.BOLD, ChatColor.LIGHT_PURPLE, player.getBukkitPlayer().getName().toUpperCase(), ChatColor.DARK_GRAY,
+                ChatColor.BOLD, ChatColor.RED, player.getBukkitPlayer().getName().toUpperCase(), ChatColor.DARK_GRAY,
                 ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getWins(),
                 ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getLosses(),
                 ChatColor.BOLD, ChatColor.DARK_GRAY, timePlayed));

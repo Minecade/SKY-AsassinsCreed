@@ -1,5 +1,6 @@
 package com.minecade.ac.engine;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,6 +29,9 @@ import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.ac.task.InvisibilityTask;
 import com.minecade.ac.task.LobbyTimerTask;
 import com.minecade.ac.world.ACWorld1;
+import com.minecade.ac.world.ACWorld2;
+import com.minecade.ac.world.ACWorld3;
+import com.minecade.ac.world.ACWorld4;
 import com.minecade.engine.utils.EngineUtils;
 
 public class ACGame {
@@ -47,8 +51,6 @@ public class ACGame {
     private int matchRequiredPlayers;  
 
     private List<ACMatch> matches;
-    
-    private int serverMatches;
 
     private Location lobby;
     
@@ -56,7 +58,7 @@ public class ACGame {
 
     private int vipPlayers;
 
-    private int countdown; 
+    private int matchCountdown; 
     
     private Location lobbyLocation;
     
@@ -79,10 +81,9 @@ public class ACGame {
         this.plugin = plugin;
         
         // Load properties
-        this.serverMatches = plugin.getConfig().getInt("server.matches");
         this.maxPlayers = plugin.getConfig().getInt("server.max-players");
         this.vipPlayers = plugin.getConfig().getInt("server.max-vip-players");
-        this.countdown = plugin.getConfig().getInt("lobby.start-countdown");
+        this.matchCountdown = plugin.getConfig().getInt("match.start-countdown");
         this.matchRequiredPlayers = plugin.getConfig().getInt("match.required-players");
         
         // Register scoreboard
@@ -108,11 +109,18 @@ public class ACGame {
             return;
         }  
         
-        // if the map is the lobby
+        // Init lobby
         if (plugin.getConfig().getString("lobby.name").equalsIgnoreCase(world.getName())) {
             this.lobby = EngineUtils.locationFromConfig(this.plugin.getConfig(), world, "lobby.spawn");
             world.setSpawnLocation(this.lobby.getBlockX(), this.lobby.getBlockY(), this.lobby.getBlockZ());
         }
+        
+        // Init matches
+        this.matches = new ArrayList<ACMatch>();
+        this.matches.add(new ACMatch(this.plugin, new ACWorld1(this.plugin)));
+        this.matches.add(new ACMatch(this.plugin, new ACWorld2(this.plugin)));
+        this.matches.add(new ACMatch(this.plugin, new ACWorld3(this.plugin)));
+        this.matches.add(new ACMatch(this.plugin, new ACWorld4(this.plugin)));
     }
     
     /**
@@ -138,7 +146,7 @@ public class ACGame {
             // Load lobby inventory
             player.loadLobbyInventory();
             
-            // Assign player scoreboard
+            // Assign player score board
             this.acScoreboard.assignTeam(player);
             bukkitPlayer.setScoreboard(this.acScoreboard.getScoreboard());
             
@@ -150,7 +158,7 @@ public class ACGame {
             if(this.players.size() >= this.matchRequiredPlayers){
                 this.preInitNextMatch();
             }
-            // Register scoreboard
+            // Register score board
             else this.acScoreboard.setPlayersToStart(this.matchRequiredPlayers - this.players.size());
         }
         // If the server is full disconnect the player.
@@ -158,57 +166,41 @@ public class ACGame {
     }
     
     /**
-     * Pre init next match
+     * Preinit next match
      * @author Kvnamo
      */
     public synchronized void preInitNextMatch(){
         
         // Start game timer.
         if(this.timerTask != null) this.timerTask.cancel();
-        this.timerTask = new LobbyTimerTask(this, this.countdown);
+        this.timerTask = new LobbyTimerTask(this, this.matchCountdown);
         this.timerTask.runTaskTimer(plugin, 10, 20l);
 
-        // Get available match
-        ACMatch match = null;
-        
+        // Get available match 
         synchronized(this.matches){ 
-            // FIXME Load all posible matches
-            if(this.matches.size() < this.serverMatches){
-                match = new ACMatch(this.plugin);
-                match.setACWorld(new ACWorld1(this.plugin));
-                this.matches.add(match);
-            }
             
-            match = null;
-            
-            for (ACMatch availableMatch : this.matches) {
+            for (ACMatch match : this.matches) {
                 if(MatchStatusEnum.STOPPED.equals(match.getStatus())){
-                    match = availableMatch;
-                }
-            }
-        }
-        
-        // Check that there is a match available
-        if(match != null){
-            
-            // Select next match players
-            synchronized(this.players){
-                for (ACPlayer player : this.players.values()) {
-                    
-                    if(player.getCurrentMatch() == null){
-                        player.setCurrentMatch(match);
-                        this.nextMatchPlayers.add(player);
-                        
-                        // if match players is reached break
-                        if(this.nextMatchPlayers.size() == this.matchRequiredPlayers) break;
+
+                    // Select next match players
+                    synchronized(this.players){
+                        for (ACPlayer player : this.players.values()) {
+                            
+                            if(player.getCurrentMatch() == null){
+                                player.setCurrentMatch(match);
+                                this.nextMatchPlayers.add(player);
+                                
+                                // if match players is reached break
+                                if(this.nextMatchPlayers.size() == this.matchRequiredPlayers) break;
+                            }
+                        }
                     }
+                    
+                    // Announce next match players
+                    this.broadcastMessage(String.format("%s%s %sare going to the next match on %s.", ChatColor.RED, 
+                        this.nextMatchPlayers.toString(), ChatColor.DARK_GRAY, match.getACWorld().getName()));
                 }
             }
-            
-            // Announce next match players
-            this.broadcastMessage(
-                String.format("%s%s %sare going to the next match on %s.", ChatColor.RED, 
-                    this.nextMatchPlayers.toString(), ChatColor.DARK_GRAY, match.getACWorld().getName()));
         }
     }
 
@@ -415,10 +407,10 @@ public class ACGame {
      */
     public void timeLeft(int countdown) {
         
-        this.countdown = countdown;
+        this.matchCountdown = countdown;
         this.acScoreboard.setTimeLeft(countdown);
         
-        if(this.countdown < 6) return;
+        if(this.matchCountdown < 6) return;
         
         for (ACPlayer player : this.players.values()) {
             player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);
