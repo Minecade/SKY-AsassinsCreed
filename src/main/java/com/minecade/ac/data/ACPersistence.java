@@ -90,7 +90,7 @@ public class ACPersistence extends MinecadePersistence {
         
         this.lastPlayerCount = playerCount;
         
-        String dml = "update server set online_players = :online_players where id = :id";
+        String dml = "update servers set online_players = :online_players where id = :id";
         SqlUpdate update = super.plugin.getDatabase().createSqlUpdate(dml)
                 .setParameter("online_players", playerCount)
                 .setParameter("id", super.plugin.getConfig().getInt("server.id"));

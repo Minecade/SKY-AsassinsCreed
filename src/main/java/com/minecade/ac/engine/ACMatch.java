@@ -3,6 +3,7 @@ package com.minecade.ac.engine;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -83,19 +84,22 @@ public class ACMatch {
      * @param acWorld
      * @author Kvnamo
      */
-    public ACMatch(AssassinsCreedPlugin plugin, ACWorld acWorld){
+    public ACMatch(AssassinsCreedPlugin plugin, ACWorld acWorld, int matchPlayers){
         this.plugin = plugin;
         this.acWorld = acWorld;
+        
+        // Initialize properties
+        this.players =  new ConcurrentHashMap<String, ACPlayer>(matchPlayers);
     }
     
     /**
      * Init match 
-     * @param players
+     * @param match players
      * @author Kvnamo
      */
-    public void init(List<ACPlayer> players){
+    public void init(List<ACPlayer> matchPlayers){
         
-        this.time = plugin.getConfig().getInt("match.time");
+        this.time = this.plugin.getConfig().getInt("match.time");
         
         // Set match scoreboard
         if(this.acScoreboard == null)  this.acScoreboard = new ACScoreboard(this.plugin);
@@ -104,9 +108,11 @@ public class ACMatch {
         // Load players
         ACPlayer player;
         
-        for (int i = 0; i < players.size(); i++) {
-            // Get player
-            player = players.get(i);
+        for (int i = 0; i < matchPlayers.size(); i++) {
+            
+            // Get player and put it in list
+            player = matchPlayers.get(i);
+            this.players.put(player.getBukkitPlayer().getName(), player);
             
             // Setup player scoreboard
             this.acScoreboard.assignTeam(player);
@@ -129,8 +135,6 @@ public class ACMatch {
             }
             // Set navy
             else player.getBukkitPlayer().teleport(this.acWorld.getNavyLocation());
-            
-            this.players.put(player.getBukkitPlayer().getName(), player);
         }
         
         // Load npc.
@@ -494,7 +498,7 @@ public class ACMatch {
         this.countdown = countdown;
         this.acScoreboard.setTimeLeft(countdown);
         
-        if(this.countdown < 6) return;
+        if(this.countdown > 6) return;
         
         for (ACPlayer player : this.players.values()) {
             player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);

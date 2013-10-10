@@ -77,7 +77,6 @@ public class ACGame {
         // Load properties
         this.maxPlayers = plugin.getConfig().getInt("server.max-players");
         this.vipPlayers = plugin.getConfig().getInt("server.max-vip-players");
-        this.matchCountdown = plugin.getConfig().getInt("match.start-countdown");
         this.matchRequiredPlayers = plugin.getConfig().getInt("match.required-players");
         
         // Register scoreboard
@@ -86,6 +85,7 @@ public class ACGame {
         
         // Initialize properties
         this.players =  new ConcurrentHashMap<String, ACPlayer>(this.vipPlayers);
+        this.nextMatchPlayers = new ArrayList<ACPlayer>(this.matchRequiredPlayers);
     }
 
     /**
@@ -108,13 +108,20 @@ public class ACGame {
             this.lobby = EngineUtils.locationFromConfig(this.plugin.getConfig(), world, "lobby.spawn");
             world.setSpawnLocation(this.lobby.getBlockX(), this.lobby.getBlockY(), this.lobby.getBlockZ());
         }
+    }
+
+    /**
+     * Inits the matches.
+     * @author Kvnamo
+     */
+    public void initMatches() {
         
         // Init matches
         this.matches = new ArrayList<ACMatch>();
-        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(0)));
-        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(1)));
-        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(2)));
-        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(3)));
+        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(0), this.matchRequiredPlayers));
+        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(1), this.matchRequiredPlayers));
+        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(2), this.matchRequiredPlayers));
+        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(3), this.matchRequiredPlayers));
     }
     
     /**
@@ -165,6 +172,8 @@ public class ACGame {
      */
     public synchronized void preInitNextMatch(){
         
+        this.matchCountdown = plugin.getConfig().getInt("match.start-countdown");
+        
         // Start game timer.
         if(this.timerTask != null) this.timerTask.cancel();
         this.timerTask = new LobbyTimerTask(this, this.matchCountdown);
@@ -184,15 +193,15 @@ public class ACGame {
                                 player.setCurrentMatch(match);
                                 this.nextMatchPlayers.add(player);
                                 
+                                // Announce next match players
+                                player.getBukkitPlayer().sendMessage(String.format("%sYou are going to the next match on %s!", 
+                                    ChatColor.YELLOW, match.getACWorld().getName()));
+                                
                                 // if match players is reached break
                                 if(this.nextMatchPlayers.size() == this.matchRequiredPlayers) break;
                             }
                         }
                     }
-                    
-                    // Announce next match players
-                    this.broadcastMessage(String.format("%s%s %sare going to the next match on %s.", ChatColor.RED, 
-                        this.nextMatchPlayers.toString(), ChatColor.DARK_GRAY, match.getACWorld().getName()));
                 }
             }
         }
@@ -404,7 +413,7 @@ public class ACGame {
         this.matchCountdown = countdown;
         this.acScoreboard.setTimeLeft(countdown);
         
-        if(this.matchCountdown < 6) return;
+        if(this.matchCountdown > 6) return;
         
         for (ACPlayer player : this.players.values()) {
             player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);

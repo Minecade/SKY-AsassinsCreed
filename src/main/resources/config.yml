@@ -6,7 +6,7 @@
 # Entities root packages
 entities:
     package: 'com.minecade.ac.data'
-
+    
 # Central Database
 minecade:
     central-database:
@@ -26,6 +26,9 @@ lobby:
         yaw: 92 
         z: 2452    
         pitch: 0
+
+#Logging Level
+logging-level: INFO
 
 # Match
 match:
@@ -47,7 +50,3 @@ server:
     max-vip-players: 30 # Match players in the server.        
     name: 'AC Server 1'
    
-   
- 
-
-    

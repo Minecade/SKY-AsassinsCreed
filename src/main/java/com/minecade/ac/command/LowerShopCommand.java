@@ -7,6 +7,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
+import com.minecade.engine.MinecadePlugin;
 import com.minecade.engine.utils.MinecadeCommand;
 
 @MinecadeCommand(commandName="lowershop")
@@ -19,8 +20,8 @@ public class LowerShopCommand implements CommandExecutor {
      * @param game
      * @author Kvnamo
      */
-    public LowerShopCommand(final AssassinsCreedPlugin plugin) {
-        this.plugin = plugin;
+    public LowerShopCommand(final MinecadePlugin plugin) {
+        this.plugin = (AssassinsCreedPlugin) plugin;
     }
 
     /**
