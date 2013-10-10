@@ -3,6 +3,10 @@
 # Tip: all property keys lowercase!!!                    #
 # ------------------------------------------------------ #
 
+# Entities root packages
+entities:
+    package: 'com.minecade.ac.data'
+
 # Central Database
 minecade:
     central-database:
