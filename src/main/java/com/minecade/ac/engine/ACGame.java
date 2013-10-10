@@ -28,10 +28,6 @@ import com.minecade.ac.enums.MatchStatusEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.ac.task.InvisibilityTask;
 import com.minecade.ac.task.LobbyTimerTask;
-import com.minecade.ac.world.ACWorld1;
-import com.minecade.ac.world.ACWorld2;
-import com.minecade.ac.world.ACWorld3;
-import com.minecade.ac.world.ACWorld4;
 import com.minecade.engine.utils.EngineUtils;
 
 public class ACGame {
@@ -115,10 +111,10 @@ public class ACGame {
         
         // Init matches
         this.matches = new ArrayList<ACMatch>();
-        this.matches.add(new ACMatch(this.plugin, new ACWorld1(this.plugin)));
-        this.matches.add(new ACMatch(this.plugin, new ACWorld2(this.plugin)));
-        this.matches.add(new ACMatch(this.plugin, new ACWorld3(this.plugin)));
-        this.matches.add(new ACMatch(this.plugin, new ACWorld4(this.plugin)));
+        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(0)));
+        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(1)));
+        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(2)));
+        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(3)));
     }
     
     /**

@@ -8,19 +8,19 @@ import javax.persistence.Table;
 // This class is an entity that should be persisted
 @Entity
 // Name of the table in the database/file
-@Table(name = "server")
+@Table(name = "servers")
 public class ServerModel {
 
     @Id
     @Column(name = "id", unique = true)
-    private long serverId;
+    private int serverId;
     
     /**
      * Get server id
      * @return the serverId
      * @author Kvnamo
      */
-    public long getServerId() {
+    public int getServerId() {
         return serverId;
     }
 
@@ -28,7 +28,7 @@ public class ServerModel {
      * @param serverId 
      * @author Kvnamo
      */
-    public void setServerId(long serverId) {
+    public void setServerId(int serverId) {
         this.serverId = serverId;
     }
     

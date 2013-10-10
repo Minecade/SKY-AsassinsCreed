@@ -5,22 +5,23 @@
 
 # Central Database
 minecade:
-  central-database:
-    driver: com.mysql.jdbc.Driver
-    password: root
-    url: jdbc:mysql://localhost:3306/sky_network
-    username: root
+    central-database:
+        driver: com.mysql.jdbc.Driver
+        password: root
+        url: jdbc:mysql://localhost:3306/sky_network
+        username: root
 
 # Lobby
 lobby:
     name: 'aclobby'
     spawn:
-        x: 0
-        y: 17
-        z: 1 
-        yaw: 92    
-        pitch: 3
+        pitch: 0
         world: aclobby
+        x: -1120
+        y: 13
+        yaw: 92 
+        z: 2452    
+        pitch: 0
 
 # Match
 match:

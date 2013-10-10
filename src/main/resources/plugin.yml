@@ -1,10 +1,10 @@
 # plugin config for bukkit
-name: ${project.name}
-main: ${main.class}
-version: '${project.version}'
 authors: [kvnamo, victorv977]
+main: ${main.class}
+name: ${project.name}
+version: '${project.version}'
 
-#load: startup # disabled because we need to load the worlds, to load the world ther server must be loaded.
+#load: startup # disabled because we need to load the worlds, to load the world the server must be loaded.
 
 commands:
     ban:

@@ -9,8 +9,6 @@ import com.minecade.engine.data.MinecadePersistence;
 
 public class ACPersistence extends MinecadePersistence { 
 
-    private final AssassinsCreedPlugin plugin;
-    
     private int lastPlayerCount;
 
     /**
@@ -20,7 +18,6 @@ public class ACPersistence extends MinecadePersistence {
      */
     public ACPersistence(final AssassinsCreedPlugin plugin) {
         super(plugin);
-        this.plugin = plugin;
     }
     
     /**
@@ -30,7 +27,7 @@ public class ACPersistence extends MinecadePersistence {
      * @author kvnamo
      */
     public ServerModel getServerById(long serverId) {
-        return plugin.getDatabase().find(ServerModel.class).where().eq("serverId", serverId).findUnique();
+        return super.plugin.getDatabase().find(ServerModel.class).where().eq("serverId", serverId).findUnique();
     }
 
     /**
@@ -38,20 +35,21 @@ public class ACPersistence extends MinecadePersistence {
      * @author kvnamo
      */
     public void createOrUpdateServer() {
+        
         ServerModel server = getServerById(this.plugin.getConfig().getInt("server.id"));
         
         if(server == null) {
-         // create a new bean that is managed by bukkit
-            server = this.plugin.getDatabase().createEntityBean(ServerModel.class);
-            server.setServerId(this.plugin.getConfig().getInt("server.id"));
+            // create a new bean that is managed by bukkit
+            server = super.plugin.getDatabase().createEntityBean(ServerModel.class);
+            server.setServerId(super.plugin.getConfig().getInt("server.id"));
         }        
 
-        server.setMaxPlayers(this.plugin.getConfig().getInt("match.required-players"));
-        server.setOnlinePlayers(0);
+        server.setMaxPlayers(super.plugin.getConfig().getInt("server.max-players"));
+        server.setOnlinePlayers(super.plugin.getServer().getOnlinePlayers().length);
         //server.setState(PMSStatusEnum.WAITING_FOR_PLAYERS);
         
         // store the bean
-        this.plugin.getDatabase().save(server);
+        super.plugin.getDatabase().save(server);
     }
     
 //    /**
@@ -85,7 +83,7 @@ public class ACPersistence extends MinecadePersistence {
      */
     public void updateServerPlayers() {
         
-        final int playerCount = this.plugin.getServer().getOnlinePlayers().length;
+        final int playerCount = super.plugin.getServer().getOnlinePlayers().length;
         if (playerCount == this.lastPlayerCount) {
             return;
         }
@@ -93,9 +91,9 @@ public class ACPersistence extends MinecadePersistence {
         this.lastPlayerCount = playerCount;
         
         String dml = "update server set online_players = :online_players where id = :id";
-        SqlUpdate update = this.plugin.getDatabase().createSqlUpdate(dml)
+        SqlUpdate update = super.plugin.getDatabase().createSqlUpdate(dml)
                 .setParameter("online_players", playerCount)
-                .setParameter("id", this.plugin.getConfig().getInt("server.id"));
+                .setParameter("id", super.plugin.getConfig().getInt("server.id"));
         update.execute();
     }
 
@@ -106,12 +104,12 @@ public class ACPersistence extends MinecadePersistence {
      */
     public PlayerModel getPlayer(String playerName){
         
-        PlayerModel playerModel = this.plugin.getDatabase().find(PlayerModel.class)
+        PlayerModel playerModel = super.plugin.getDatabase().find(PlayerModel.class)
             .where().eq("username", playerName).findUnique();
         
         if(null == playerModel){ 
             // create a new bean that is managed by bukkit
-            playerModel = this.plugin.getDatabase().createEntityBean(PlayerModel.class);
+            playerModel = super.plugin.getDatabase().createEntityBean(PlayerModel.class);
             playerModel.setUsername(playerName); 
             playerModel.setWins(0);
             playerModel.setLosses(0);
@@ -119,7 +117,7 @@ public class ACPersistence extends MinecadePersistence {
             playerModel.setTimePlayed(0); 
 
             // Store the bean
-            this.plugin.getDatabase().save(playerModel);
+            super.plugin.getDatabase().save(playerModel);
         }
         
         return playerModel;

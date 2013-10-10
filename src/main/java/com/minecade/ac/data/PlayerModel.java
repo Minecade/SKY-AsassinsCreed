@@ -16,30 +16,8 @@ import javax.persistence.TemporalType;
 // name of the table in the database/file
 @Table(name = "players")
 public class PlayerModel {
-
+    
     @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
-    @Column(name = "id", unique = true, insertable = false)
-    private long id;
-    
-    /**
-     * Get id
-     * @return id
-     * @author Kvnamo
-     */
-    public long getId() {
-        return id;
-    }
-
-    /**
-     * Set id
-     * @param id
-     * @author Kvnamo
-     */
-    public void setId(long id) {
-        this.id = id;
-    }
-    
     @Column(name = "username", length = 16, unique = true, nullable = false)
     private String username;
     
