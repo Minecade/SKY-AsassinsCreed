@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -15,6 +16,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -28,6 +30,7 @@ import com.minecade.ac.enums.MatchStatusEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.ac.task.InvisibilityTask;
 import com.minecade.ac.task.LobbyTimerTask;
+import com.minecade.engine.enums.PlayerTagEnum;
 import com.minecade.engine.utils.EngineUtils;
 
 public class ACGame {
@@ -44,10 +47,6 @@ public class ACGame {
     
     private int matchRequiredPlayers;  
     
-    private Location lobby;
-    
-    private ACScoreboard acScoreboard;
-    
     private List<ACMatch> matches;
     
     private Map<String, ACPlayer> players;
@@ -56,13 +55,26 @@ public class ACGame {
     
     private LobbyTimerTask timerTask;
 
+    private Location lobby;
+    
     /**
      * return lobby location in game.
-     * @return
+     * @return lobby location
      * @author Kvnamo
      */
     public Location getLobbyLocation(){
         return lobby;
+    }
+    
+    private ACScoreboard acScoreboard;
+    
+    /**
+     * return scoreboard
+     * @return scoreboard
+     * @author Kvnamo
+     */
+    public ACScoreboard getACScoreboard(){
+        return acScoreboard;
     }
     
     /**
@@ -111,7 +123,7 @@ public class ACGame {
     }
 
     /**
-     * Inits the matches.
+     * Init the matches.
      * @author Kvnamo
      */
     public void initMatches() {
@@ -156,11 +168,7 @@ public class ACGame {
             bukkitPlayer.teleport(this.lobby); 
 
             // Start a match if there are enough players
-            if(this.players.size() >= this.matchRequiredPlayers){
-                this.preInitNextMatch();
-            }
-            // Register score board
-            else this.acScoreboard.setPlayersToStart(this.matchRequiredPlayers - this.players.size());
+            this.preInitNextMatch();
         }
         // If the server is full disconnect the player.
         else EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
@@ -172,39 +180,42 @@ public class ACGame {
      */
     public synchronized void preInitNextMatch(){
         
-        this.matchCountdown = plugin.getConfig().getInt("match.start-countdown");
+        if(this.players.size() >= this.matchRequiredPlayers){
         
-        // Start game timer.
-        if(this.timerTask != null) this.timerTask.cancel();
-        this.timerTask = new LobbyTimerTask(this, this.matchCountdown);
-        this.timerTask.runTaskTimer(plugin, 10, 20l);
-
-        // Get available match 
-        synchronized(this.matches){ 
+            this.matchCountdown = plugin.getConfig().getInt("match.start-countdown");
             
+            // Start game timer.
+            if(this.timerTask != null) this.timerTask.cancel();
+            this.timerTask = new LobbyTimerTask(this, this.matchCountdown);
+            this.timerTask.runTaskTimer(plugin, 10, 20l);
+    
+            // Get available match 
             for (ACMatch match : this.matches) {
                 if(MatchStatusEnum.STOPPED.equals(match.getStatus())){
-
+    
                     // Select next match players
-                    synchronized(this.players){
-                        for (ACPlayer player : this.players.values()) {
+                    for (ACPlayer player : this.players.values()) {
+                        
+                        if(player.getCurrentMatch() == null){
+                            player.setCurrentMatch(match);
+                            this.nextMatchPlayers.add(player);
                             
-                            if(player.getCurrentMatch() == null){
-                                player.setCurrentMatch(match);
-                                this.nextMatchPlayers.add(player);
-                                
-                                // Announce next match players
-                                player.getBukkitPlayer().sendMessage(String.format("%sYou are going to the next match on %s!", 
-                                    ChatColor.YELLOW, match.getACWorld().getName()));
-                                
-                                // if match players is reached break
-                                if(this.nextMatchPlayers.size() == this.matchRequiredPlayers) break;
-                            }
+                            // Announce next match players
+                            player.getBukkitPlayer().sendMessage(String.format("%sYou are going to the next match on %s!", 
+                                ChatColor.YELLOW, match.getACWorld().getName()));
+                            
+                            // if match players is reached break
+                            if(this.nextMatchPlayers.size() == this.matchRequiredPlayers) break;
                         }
                     }
                 }
             }
+            
+            // Update score board
+            this.acScoreboard.setPlayersToStart(0);
         }
+        // Update score board
+        else this.acScoreboard.setPlayersToStart(this.matchRequiredPlayers - this.players.size());
     }
 
     /**
@@ -254,9 +265,10 @@ public class ACGame {
             // If there is no player stop timer and wait.
             if(this.nextMatchPlayers.size() < this.matchRequiredPlayers){
                 this.timerTask.cancel();
+                this.acScoreboard.setPlayersToStart(this.players.size());
             }
             
-            this.broadcastMessage(String.format("%s[%s] %squit the game.", ChatColor.RED, playerName, ChatColor.GRAY));
+            this.broadcastMessage(String.format("%s%s %squit the game.", ChatColor.RED, playerName, ChatColor.GRAY));
         }
         else match.playerQuit(player);
     }
@@ -355,7 +367,7 @@ public class ACGame {
         final ACMatch match = player.getCurrentMatch();
         
         // If the player is in the lobby do nothing
-        if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
+        if (match != null){
             match.playerMove(event, player);
         }
     }
@@ -388,6 +400,9 @@ public class ACGame {
                     // Start invisibility.
                     new InvisibilityTask(player, 1).runTaskTimer(plugin, 10, 200l);
                 }
+                else bukkitPlayer.sendMessage(String.format(
+                    "%sYou are cooling down. Wait for use invisibility again.", ChatColor.AQUA));
+                    
             }
         }
         else if(Action.RIGHT_CLICK_BLOCK.equals(event.getAction())){
@@ -401,6 +416,41 @@ public class ACGame {
             else event.setCancelled(true);
         }
         else if(event.getClickedBlock() != null && !event.getPlayer().isOp()) event.setCancelled(true);
+    }
+    
+    /**
+     * Chat message formatting
+     * @param event
+     * @author Kvnamo
+     */
+    public void chatMessage(AsyncPlayerChatEvent event) {
+        
+        final ACPlayer player = this.players.get(event.getPlayer().getName());
+
+        // Last message.
+        if(StringUtils.isNotBlank(player.getLastMessage()) && player.getLastMessage().equals(event.getMessage().toLowerCase())){
+            event.getPlayer().sendMessage(String.format("%sPlease don't send the same message multiple times!", ChatColor.GRAY));
+            event.setCancelled(true);
+        }
+
+        player.setLastMessage(event.getMessage().toLowerCase());
+        PlayerTagEnum playerTag = PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount());
+        event.setFormat(playerTag.getPrefix() + ChatColor.WHITE + "%s" + ChatColor.GRAY + ": %s");
+        
+        final ACMatch match = player.getCurrentMatch();
+        
+        if(match != null && !MatchStatusEnum.STOPPED.equals(match.getStatus())){
+            // Send message only to players in current match
+            for (ACPlayer matchPlayer : this.players.values()) {
+                
+                if(match.equals(matchPlayer.getCurrentMatch())){
+                    player.getBukkitPlayer().sendMessage(event.getMessage());
+                }
+            }
+        }
+        else this.broadcastMessage(event.getMessage());
+        
+        event.setCancelled(true);
     }
     
     /**
@@ -430,7 +480,8 @@ public class ACGame {
         final ACPlayer player = this.players.get(bukkitPlayer.getName());
         final ACMatch match = player.getCurrentMatch();
         
-        if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
+        if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) &&
+            CharacterEnum.ASSASSIN.equals(player.getCharacter())){
             bukkitPlayer.teleport(match.getACWorld().getShipLocation());
         }
     }
@@ -464,4 +515,6 @@ public class ACGame {
             }
         }
     }
+
+    
 }

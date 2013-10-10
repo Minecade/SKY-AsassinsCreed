@@ -26,6 +26,7 @@ public class ACCharacter {
             case ASSASSIN:
                 // Set default lives
                 player.setLives(3);
+                player.getBukkitPlayer().setLevel(1);
              
                 // Set potions
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getInvisibleEmerald());
@@ -37,9 +38,9 @@ public class ACCharacter {
                 player.setLives(1);
                 
                 // Set potions 
-                player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 80, 2));
-                player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SLOW, Integer.MAX_VALUE, 6));
-                player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, Integer.MAX_VALUE, 2));
+                player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, 1));
+                player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SLOW, Integer.MAX_VALUE, 2));
+                player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, Integer.MAX_VALUE, 5));
                 
                 // Set inventory
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getSolidCane());
@@ -51,7 +52,6 @@ public class ACCharacter {
                 player.setLives(1);
                 
                 // Set potions
-                player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SLOW, Integer.MAX_VALUE, 5));
                 player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
                 
                 // Set inventory
@@ -64,8 +64,6 @@ public class ACCharacter {
                 player.setLives(1);
                 
                 // Set potions
-                player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SLOW, Integer.MAX_VALUE, 5));
-                player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
                 player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, Integer.MAX_VALUE, 1));
                 
                 // Set inventory

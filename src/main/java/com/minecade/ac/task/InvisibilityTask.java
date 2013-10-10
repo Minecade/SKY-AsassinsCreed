@@ -1,5 +1,6 @@
 package com.minecade.ac.task;
 
+import org.bukkit.ChatColor;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import com.minecade.ac.engine.ACPlayer;
@@ -45,9 +46,13 @@ public class InvisibilityTask extends BukkitRunnable{
         // 1 is equal to 10 seconds
         else if(this.coolingTime == invisibilityTime){
             this.player.getCurrentMatch().hidePlayer(this.player.getBukkitPlayer(), false);
+            this.player.getBukkitPlayer().sendMessage(String.format(
+                "%sYou are invisible.", ChatColor.AQUA));
         }
         // 3 is equal to 30 seconds
         else if(this.coolingTime == 3){
+            this.player.getBukkitPlayer().sendMessage(String.format(
+                "%sYou can use the invisibility emerald again.", ChatColor.AQUA));
             this.player.setCooling(false);
             super.cancel();
         }

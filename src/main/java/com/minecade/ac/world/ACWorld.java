@@ -31,27 +31,15 @@ public abstract class ACWorld extends MinecadeWorld{
         return this.navyLocation;
     }
     
-    private Location lowerShopLocation;
+    private Location navyRooomLocation;
     
     /**
-     * Get lowe shop location
+     * Get navy room spawn location
      * @author Kvnamo
      */
-    public Location getLowerShopLocation(){
-        return this.lowerShopLocation;
+    public Location getNavyRoomLocation(){
+        return this.navyRooomLocation;
     }
-    
-    private Location killBoxLocation;
-    
-    /**
-     * Get kill box spawn location
-     * @author Kvnamo
-     */
-    public Location getKillBoxLocation(){
-        return this.killBoxLocation;
-    }
-    
-    private Location bodyguardLocation;
     
     /**
      * Get bodyguard location
@@ -81,6 +69,30 @@ public abstract class ACWorld extends MinecadeWorld{
         return this.swordsmanLocation;
     }
     
+    private Location lowerShopLocation;
+    
+    /**
+     * Get lowe shop location
+     * @author Kvnamo
+     */
+    public Location getLowerShopLocation(){
+        return this.lowerShopLocation;
+    }
+    
+    private Location killBoxLocation;
+    
+    /**
+     * Get kill box spawn location
+     * @author Kvnamo
+     */
+    public Location getKillBoxLocation(){
+        return this.killBoxLocation;
+    }
+    
+    private Location bodyguardLocation;
+    
+ 
+    
     private Map<NPCEnum, Location> npcLocation;
     
     /**
@@ -101,23 +113,27 @@ public abstract class ACWorld extends MinecadeWorld{
             String.format("assassins%s", world), plugin);
         
         // Set assassin spawn locations.
-        this.shipLocation = new Location(this.world, -169, 114, 34);
+        this.shipLocation = new Location(super.world, -169, 114, 34);
         
         // Set navy spawn locations.
-        this.navyLocation = new Location(this.world, -161, 96, -49);
+        this.navyLocation = new Location(super.world, -170, 113, 18);
+        this.navyRooomLocation = new Location(super.world, -161, 96, -49);
+        this.bodyguardLocation = new Location(super.world, -149, 96, -47);
+        this.musketeerLocation = new Location(super.world, -149, 96, -50);
+        this.swordsmanLocation = new Location(super.world, -149, 96, -53);
         
         // Set top shop location
-        this.lowerShopLocation = new Location(this.world, -167, 107, 18);
+        this.lowerShopLocation = new Location(super.world, -167, 107, 18);
         
         // Set killBox spawn locations.
-        this.killBoxLocation = new Location(this.world, -176, 96, -49);
+        this.killBoxLocation = new Location(super.world, -176, 96, -49);
         
         // Set NPC spawn locations.
         this.npcLocation = new ConcurrentHashMap<NPCEnum, Location>();
-        this.npcLocation.put(NPCEnum.GREEN, new Location(this.world, -142, 123, -83));
-        this.npcLocation.put(NPCEnum.GRAY, new Location(this.world, -154, 117, -48));
-        this.npcLocation.put(NPCEnum.RED, new Location(this.world, -182, 117, -52));
-        this.npcLocation.put(NPCEnum.YELLOW, new Location(this.world, -208, 124, -68));
-        this.npcLocation.put(NPCEnum.WHITE, new Location(this.world, -216, 116, -37));
+        this.npcLocation.put(NPCEnum.GREEN, new Location(super.world, -142, 123, -83));
+        this.npcLocation.put(NPCEnum.GRAY, new Location(super.world, -154, 117, -48));
+        this.npcLocation.put(NPCEnum.RED, new Location(super.world, -182, 117, -52));
+        this.npcLocation.put(NPCEnum.YELLOW, new Location(super.world, -208, 124, -68));
+        this.npcLocation.put(NPCEnum.WHITE, new Location(super.world, -216, 116, -37));
     }
 }

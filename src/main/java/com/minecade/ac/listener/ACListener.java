@@ -10,6 +10,7 @@ import org.bukkit.event.block.LeavesDecayEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -131,18 +132,6 @@ public class ACListener implements Listener{
     }
     
 //    /**
-//     * 
-//     * @param event
-//     * @author kvnamo
-//     */
-//    @EventHandler
-//    public void playerItemBreakEvent(PlayerItemBreakEvent event){
-//        ItemStack item = event.getBrokenItem().clone();
-//        item.setDurability((short)0);
-//        event.getPlayer().getInventory().addItem(item);
-//    }
-    
-//    /**
 //     * Call by PlayerInteractEvent handler when player interacts.
 //     * @param playerInteractEvent
 //     * @author kvnamo
@@ -162,15 +151,15 @@ public class ACListener implements Listener{
 //        this.plugin.getGame().projectileHit(event);
 //    }
 //        
-//    /** 
-//     * Call by AsyncPlayerChatEvent on player chat
-//     * @param event
-//     * @author kvnamo
-//     */
-//    @EventHandler
-//    public void onPlayerChat(AsyncPlayerChatEvent event) {
-//        this.plugin.getGame().chatMessage(event);
-//    }
+    /** 
+     * Call by AsyncPlayerChatEvent on player chat
+     * @param event
+     * @author kvnamo
+     */
+    @EventHandler
+    public void onPlayerChat(AsyncPlayerChatEvent event) {
+        this.plugin.getGame().chatMessage(event);
+    }
     
     /**
      * Called by PlayerGameModeChangeEvent when a player tries to change game mode.
