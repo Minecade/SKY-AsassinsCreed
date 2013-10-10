@@ -3,6 +3,13 @@
 # Tip: all property keys lowercase!!!                    #
 # ------------------------------------------------------ #
 
+#Logging Level
+logging-level: INFO
+
+# Entities root packages
+entities:
+    package: 'com.minecade.ac.data'
+    
 # Central Database
 minecade:
     central-database:

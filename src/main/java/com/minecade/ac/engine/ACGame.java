@@ -108,7 +108,12 @@ public class ACGame {
             this.lobby = EngineUtils.locationFromConfig(this.plugin.getConfig(), world, "lobby.spawn");
             world.setSpawnLocation(this.lobby.getBlockX(), this.lobby.getBlockY(), this.lobby.getBlockZ());
         }
-        
+    }
+
+    /**
+     * Inits the matches.
+     */
+    public void initMatches() {
         // Init matches
         this.matches = new ArrayList<ACMatch>();
         this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(0)));

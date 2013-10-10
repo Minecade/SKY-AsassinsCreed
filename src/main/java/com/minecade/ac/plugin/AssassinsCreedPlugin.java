@@ -91,7 +91,10 @@ public class AssassinsCreedPlugin extends MinecadePlugin {
         super.getConfig().options().copyDefaults(true);
         
         // Register listeners
-        super.getServer().getPluginManager().registerEvents(new ACListener(this), this);
+        super.getServer().getPluginManager().registerEvents(new ACListener(this), this);     
+        
+        // Initialize game.
+        this.game = new ACGame(this);
         
         // Register commands
         CommandFactory.registerCommands(this, ASSASSINSCREED_COMMANDS_PACKAGE);
@@ -107,8 +110,8 @@ public class AssassinsCreedPlugin extends MinecadePlugin {
         this.acWorlds.add(new ACWorld3(this));
         this.acWorlds.add(new ACWorld4(this));
         
-        // Initialize match.
-        this.game = new ACGame(this);
+        // Initialize Matches.
+        this.game.initMatches();
 
         // Register Bungeecord
         super.getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
