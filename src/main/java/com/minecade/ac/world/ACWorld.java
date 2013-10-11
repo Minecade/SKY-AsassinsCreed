@@ -109,7 +109,7 @@ public abstract class ACWorld extends MinecadeWorld{
      * @author Kvnamo
      */
     public ACWorld(MinecadePlugin plugin, int world) {
-        super(String.format("Assassins Creed %s", world),
+        super(String.format("Assassin's Creed %s", world),
             String.format("assassins%s", world), plugin);
         
         // Set assassin spawn locations.

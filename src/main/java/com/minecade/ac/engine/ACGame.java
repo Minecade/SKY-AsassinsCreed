@@ -92,7 +92,7 @@ public class ACGame {
         this.matchRequiredPlayers = plugin.getConfig().getInt("match.required-players");
         
         // Register scoreboard
-        this.acScoreboard = new ACScoreboard(this.plugin);
+        this.acScoreboard = new ACScoreboard(this.plugin, true);
         this.acScoreboard.init();
         
         // Initialize properties
@@ -160,7 +160,7 @@ public class ACGame {
             player.loadLobbyInventory();
             
             // Assign player score board
-            this.acScoreboard.assignTeam(player);
+            this.acScoreboard.assignPlayerTeam(player);
             bukkitPlayer.setScoreboard(this.acScoreboard.getScoreboard());
             
             // Add player to players collection
@@ -227,7 +227,10 @@ public class ACGame {
         ACMatch match = this.nextMatchPlayers.size() == this.matchRequiredPlayers ? 
             ((ACPlayer)this.nextMatchPlayers.get(0)).getCurrentMatch() : null;
         
-        if(match != null) match.init(this.nextMatchPlayers);
+        if(match != null){
+            match.init(this.nextMatchPlayers);
+            this.nextMatchPlayers.clear();
+        }
     }
 
     /**
@@ -352,8 +355,11 @@ public class ACGame {
             // If the player is in the lobby do nothing
             if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
                 match.npcDamage(event, damager);
+                return;
             }
         }
+        
+        event.setCancelled(true);
     } 
     
     /**
@@ -444,11 +450,12 @@ public class ACGame {
             for (ACPlayer matchPlayer : this.players.values()) {
                 
                 if(match.equals(matchPlayer.getCurrentMatch())){
-                    player.getBukkitPlayer().sendMessage(event.getMessage());
+                    player.getBukkitPlayer().sendMessage(String.format("%s: %s",
+                        player.getBukkitPlayer().getName(), event.getMessage()));
                 }
             }
         }
-        else this.broadcastMessage(event.getMessage());
+        else this.broadcastMessage(String.format("%s: %s",player.getBukkitPlayer().getName(), event.getMessage()));
         
         event.setCancelled(true);
     }
@@ -496,7 +503,8 @@ public class ACGame {
         final ACPlayer player = this.players.get(bukkitPlayer.getName());
         final ACMatch match = player.getCurrentMatch();
         
-        if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
+        if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) &&
+            CharacterEnum.ASSASSIN.equals(player.getCharacter())){
             bukkitPlayer.teleport(match.getACWorld().getLowerShopLocation());
         }
     }

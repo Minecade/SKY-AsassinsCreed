@@ -44,7 +44,7 @@ public class ACCharacter {
                 
                 // Set inventory
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getSolidCane());
-                player.getBukkitPlayer().sendMessage(String.format("%sYou are a Bodyguard!", ChatColor.BLUE));
+                player.getBukkitPlayer().sendMessage(String.format("%sNavy: You are a Bodyguard!", ChatColor.BLUE));
                 break;
                     
             case MUSKETEER:
@@ -56,7 +56,7 @@ public class ACCharacter {
                 
                 // Set inventory
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getStrongCane());
-                player.getBukkitPlayer().sendMessage(String.format("%sYou are a Musketeer!", ChatColor.BLUE));
+                player.getBukkitPlayer().sendMessage(String.format("%sNavy: You are a Musketeer!", ChatColor.BLUE));
                 break;
                 
             case SWORDSMAN:
@@ -68,7 +68,7 @@ public class ACCharacter {
                 
                 // Set inventory
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getCane());
-                player.getBukkitPlayer().sendMessage(String.format("%sYou are a Swordsman!", ChatColor.BLUE));
+                player.getBukkitPlayer().sendMessage(String.format("%sNavy: You are a Swordsman!", ChatColor.BLUE));
                 break;
 
             default:
@@ -85,7 +85,7 @@ public class ACCharacter {
     public static void setupZombie(Zombie zombie, NPCEnum npc){
         
         // Set characteristics
-        zombie.setMaxHealth(30);
+        zombie.setHealth(20);
         zombie.setTarget(null);
         zombie.setCustomName(npc.name());
         

@@ -7,6 +7,7 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
+import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.engine.enums.PlayerTagEnum;
 
@@ -15,44 +16,13 @@ public class ACScoreboard {
     /**
      * Scoreboard title
      */
-    private final String TITLE = "Assassins Creed";
+    private final String TITLE = "Assassin's Creed";
     
     /**
-     * Scoreboard objective
+     * Scoreboard title
      */
-    private final String OBJECTIVE = "Black Flag";
-    
-    /**
-     * Scoreboard players to start
-     */
-    private final String PLAYERS_TO_START = "Players to Start"; 
-    
-    /**
-     * Scoreboard assassin lives
-     */
-    private final String ASSASSIN_LIVES = "Assassin lives";
-    
-    /**
-     * Scoreboard Navy
-     */
-    private final String NAVY = "Navy";
-    
-    /**
-     * Scoreboard Prisioners
-     */
-    private final String PRISIONERS = "Navy prisioners";
-    
-    /**
-     * Scoreboard Prisioners
-     */
-    private final String TARGETS = "Targets";
-    
-    /**
-     * Scoreboard players left
-     */
-    private final String TIME_LEFT = "Time Left";
-    
-    
+    private final String ASSASSIN = "Assassin";
+
     private Scoreboard scoreboard;
     
     /**
@@ -65,12 +35,22 @@ public class ACScoreboard {
     
     /**
      * Scoreboard objective
+     */
+    private final String OBJECTIVE = "Black Flag";
+    
+    /**
+     * Scoreboard objective
      * @return The scoreboard objective.
      * @author kvnamo
      */
     private Objective getScoreboardObjective(){
         return this.scoreboard.getObjective(OBJECTIVE);
     }
+    
+    /**
+     * Scoreboard players to start
+     */
+    private final String PLAYERS_TO_START = "Players to Start"; 
     
     /**
      * Sets the number of players necessaries to start the game
@@ -82,6 +62,11 @@ public class ACScoreboard {
     }
     
     /**
+     * Scoreboard assassin lives
+     */
+    private final String ASSASSIN_LIVES = "Assassin's Lives";
+    
+    /**
      * Sets the assassin remaining lives
      * @param assassinlives
      * @author kvnamo
@@ -89,6 +74,11 @@ public class ACScoreboard {
     public void setAssassinLives(int assassinlives){
         this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(ASSASSIN_LIVES)).setScore(assassinlives);
     }
+    
+    /**
+     * Scoreboard Navy
+     */
+    private final String NAVY = "Navy";
     
     /**
      * Sets the current alive navy 
@@ -100,6 +90,11 @@ public class ACScoreboard {
     }
     
     /**
+     * Scoreboard Prisioners
+     */
+    private final String PRISIONERS = "Prisioners";
+    
+    /**
      * Sets the current prisioners
      * @param playersToStart
      * @author kvnamo
@@ -109,6 +104,11 @@ public class ACScoreboard {
     }
     
     /**
+     * Scoreboard Prisioners
+     */
+    private final String TARGETS = "Targets";
+    
+    /**
      * Sets the current alive targets 
      * @param playersToStart
      * @author kvnamo
@@ -116,6 +116,11 @@ public class ACScoreboard {
     public void setNPCs(int npcs){
         this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(TARGETS)).setScore(npcs);
     }
+    
+    /**
+     * Scoreboard players left
+     */
+    private final String TIME_LEFT = "Time Left";
     
     /**
      * Sets the time left
@@ -129,19 +134,27 @@ public class ACScoreboard {
     /**
      * PMScoreboard constructor
      * @param plugin
+     * @param lobby team
      * @author kvnamo
      */
-    public ACScoreboard(AssassinsCreedPlugin plugin){       
+    public ACScoreboard(AssassinsCreedPlugin plugin, boolean lobbyTeam){       
         // Creates new scoreboard
         this.scoreboard =  plugin.getServer().getScoreboardManager().getNewScoreboard();
         
-        // Create teams
-        if(this.scoreboard.getTeams().isEmpty()){
+        if(lobbyTeam && this.scoreboard.getTeams().isEmpty()){
             for(PlayerTagEnum tag: PlayerTagEnum.values()){
                 this.scoreboard.registerNewTeam(tag.name()).setPrefix(tag.getPrefix());
             }
         }
+        else if(this.scoreboard.getTeams().isEmpty()){
+            // Create match teams
+            this.scoreboard.registerNewTeam(ASSASSIN).setPrefix(
+                    String.format("[%s%s%s] ", ChatColor.RED, ASSASSIN, ChatColor.RESET));
+            this.scoreboard.registerNewTeam(NAVY).setPrefix(
+                    String.format("[%s%s%s] ", ChatColor.BLUE, NAVY, ChatColor.RESET));
+        }
     }
+
     
     /**
      * Init scoreboard
@@ -164,11 +177,31 @@ public class ACScoreboard {
      * @param player
      * @author kvnamo
      */
-    public void assignTeam(ACPlayer player){
+    public void assignPlayerTeam(ACPlayer player){
         PlayerTagEnum playerTag = PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount());
         
         Team team = this.scoreboard.getTeam(playerTag.name());
         team.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
         team.setPrefix(playerTag.getPrefix());
+    }
+    
+    /**
+     * Assign team to player
+     * @param player
+     * @author kvnamo
+     */
+    public void assignCharacterTeam(ACPlayer player){
+        
+        if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+            Team team = this.scoreboard.getTeam(ASSASSIN);
+            team.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
+            team.setPrefix(String.format("[%s%s%s] ", ChatColor.RED, ASSASSIN, ChatColor.RESET));
+        }
+        else{
+            Team team = this.scoreboard.getTeam(NAVY);
+            team.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
+            team.setPrefix(String.format("[%s%s%s] ", ChatColor.BLUE, NAVY, ChatColor.RESET));
+        }
+
     }
 }

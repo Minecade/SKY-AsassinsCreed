@@ -102,7 +102,7 @@ public class ACMatch {
         this.time = this.plugin.getConfig().getInt("match.time");
         
         // Set match scoreboard
-        if(this.acScoreboard == null)  this.acScoreboard = new ACScoreboard(this.plugin);
+        if(this.acScoreboard == null)  this.acScoreboard = new ACScoreboard(this.plugin, false);
         this.acScoreboard.init();
         
         // Load players
@@ -113,10 +113,6 @@ public class ACMatch {
             // Get player and put it in list
             player = matchPlayers.get(i);
             this.players.put(player.getBukkitPlayer().getName(), player);
-            
-            // Setup player scoreboard
-            this.acScoreboard.assignTeam(player);
-            player.getBukkitPlayer().setScoreboard(this.acScoreboard.getScoreboard());
             
             // Set assassin
             if(i == 0){
@@ -138,6 +134,10 @@ public class ACMatch {
                 EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
                 player.getBukkitPlayer().teleport(this.acWorld.getNavyRoomLocation());
             }
+            
+            // Setup player scoreboard
+            this.acScoreboard.assignCharacterTeam(player);
+            player.getBukkitPlayer().setScoreboard(this.acScoreboard.getScoreboard());
         }
         
         // Load npc.
@@ -242,7 +242,7 @@ public class ACMatch {
 
                 synchronized(ACMatch.this.players){
                     for(ACPlayer player : ACMatch.this.players.values()){
-                        game.getACScoreboard().assignTeam(player);
+                        game.getACScoreboard().assignCharacterTeam(player);
                         player.getBukkitPlayer().setScoreboard(game.getACScoreboard().getScoreboard());
                         player.getBukkitPlayer().teleport(game.getLobbyLocation());
                         game.preInitNextMatch();
@@ -260,7 +260,7 @@ public class ACMatch {
         this.acScoreboard = null;
         
         // Announce finish
-        this.broadcastMessage(String.format("%sMatch finished! The %s wins!", ChatColor.YELLOW, this.npcs == 0 ? "Assassin" : "Navy"));
+        this.broadcastMessage(String.format("%sMatch finished! The %s wins!", ChatColor.RED, this.npcs == 0 ? "Assassin" : "Navy"));
         
     }
     
