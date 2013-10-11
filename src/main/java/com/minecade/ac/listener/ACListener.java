@@ -89,15 +89,15 @@ public class ACListener implements Listener{
          this.plugin.getGame().playerRespawn(event); 
      }
      
-       /**
-       * Call when a entity is damage.
-       * @param event
-       * @author kvnamo
-       */
-      @EventHandler
-      public void onEntityDamage(EntityDamageEvent event) {
-          this.plugin.getGame().entityDamage(event);
-      }
+      /**
+      * Call when a entity is damage.
+      * @param event
+      * @author kvnamo
+      */
+     @EventHandler
+     public void onEntityDamage(EntityDamageEvent event) {
+         this.plugin.getGame().entityDamage(event);
+     }
       
     /**
      * On player move
@@ -182,7 +182,6 @@ public class ACListener implements Listener{
     public void onEntityDeath(EntityDeathEvent event) {
         // Prevent mobs spawned from Pokeballs from dropping items or experience
         event.getDrops().clear();
-        event.setDroppedExp(3);
         
     }
     

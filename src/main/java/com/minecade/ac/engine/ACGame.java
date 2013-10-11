@@ -13,6 +13,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Zombie;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityDeathEvent;
@@ -293,13 +294,14 @@ public class ACGame {
                 match.playerDeath(event, player);
             }
         }
-        else if (event.getEntity() instanceof Zombie && event.getEntity().getKiller() instanceof Player){
+        else if (event.getEntity().getKiller() instanceof Player){
             
             final ACPlayer killer = this.players.get(((Player)event.getEntity().getKiller()).getName());
             final ACMatch match = killer.getCurrentMatch();
             
             // If the player is in the lobby do nothing
-            if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
+            if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) && 
+                CharacterEnum.ASSASSIN.equals(killer.getCharacter())){
                 match.npcDeath(event, (Zombie)event.getEntity(), killer);
             }
         }
@@ -332,6 +334,8 @@ public class ACGame {
         // If the player was damaged
         if(event.getEntity() instanceof Player){
             
+            plugin.getServer().getLogger().severe("Player");
+            
             final ACPlayer player = this.players.get(((Player)event.getEntity()).getName());
             final ACMatch match = player.getCurrentMatch();
             
@@ -348,13 +352,14 @@ public class ACGame {
             
             event.setCancelled(true);
         }
-        else if (event.getEntity() instanceof Zombie && event.getEntity().getLastDamageCause() instanceof Player){
-            final ACPlayer damager = this.players.get(((Player)event.getEntity().getLastDamageCause()).getName());
+        else if(DamageCause.ENTITY_ATTACK.equals(event.getCause())){
+            
+            final ACPlayer damager = this.players.get(((Player)((EntityDamageByEntityEvent) event).getDamager()).getName());
             final ACMatch match = damager.getCurrentMatch();
             
             // If the player is in the lobby do nothing
-            if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
-                match.npcDamage(event, damager);
+            if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) && 
+                CharacterEnum.ASSASSIN.equals(damager.getCharacter())){
                 return;
             }
         }
@@ -407,11 +412,11 @@ public class ACGame {
                     new InvisibilityTask(player, 1).runTaskTimer(plugin, 10, 200l);
                 }
                 else bukkitPlayer.sendMessage(String.format(
-                    "%sYou are cooling down. Wait for use invisibility again.", ChatColor.AQUA));
-                    
+                    "%sYou are cooling down. Wait for use invisibility again.", ChatColor.AQUA));                   
             }
         }
         else if(Action.RIGHT_CLICK_BLOCK.equals(event.getAction())){
+            
             final ACPlayer player = this.players.get(bukkitPlayer.getName());
             final ACMatch match = player.getCurrentMatch();
             

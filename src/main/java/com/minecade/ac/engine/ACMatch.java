@@ -242,7 +242,7 @@ public class ACMatch {
 
                 synchronized(ACMatch.this.players){
                     for(ACPlayer player : ACMatch.this.players.values()){
-                        game.getACScoreboard().assignCharacterTeam(player);
+                        game.getACScoreboard().assignPlayerTeam(player);
                         player.getBukkitPlayer().setScoreboard(game.getACScoreboard().getScoreboard());
                         player.getBukkitPlayer().teleport(game.getLobbyLocation());
                         game.preInitNextMatch();
@@ -252,7 +252,7 @@ public class ACMatch {
                 // Clear collections and task
                 ACMatch.this.players.clear();
             }
-        }, 100L);
+        }, 150L);
         
         // Clear collections and task
         this.prisioners.clear();
@@ -260,7 +260,8 @@ public class ACMatch {
         this.acScoreboard = null;
         
         // Announce finish
-        this.broadcastMessage(String.format("%sMatch finished! The %s wins!", ChatColor.RED, this.npcs == 0 ? "Assassin" : "Navy"));
+        this.broadcastMessage(String.format("%sMatch finished! The %s wins!", 
+            this.npcs == 0 ? ChatColor.RED : ChatColor.BLUE, this.npcs == 0 ? "Assassin" : "Navy"));
         
     }
     
@@ -327,11 +328,8 @@ public class ACMatch {
             // Add 30 seconds to match
             this.timeLeft(this.countdown + 30);
             
-            // Get killer
-            if(CharacterEnum.ASSASSIN.equals(killer.getCharacter())){
-                // Gains 2 levels when killing a player
-                killer.getBukkitPlayer().setExp(killer.getBukkitPlayer().getExp() + 3);
-            }
+            // Gains 2 levels when killing a player
+            killer.getBukkitPlayer().setExp(killer.getBukkitPlayer().getExp() + 3);
             
             // Announce npc kill
             this.broadcastMessage(String.format("%sTown Crier: %s is death! %s 30 seconds added to the match!", 
@@ -415,26 +413,6 @@ public class ACMatch {
         
         // The assassin can damaged anyone
         if(CharacterEnum.ASSASSIN.equals(enemy.getCharacter())) return;
-        
-        event.setCancelled(true);
-    }
-    
-    /**
-     * On zombie damaged
-     * @param event
-     * @param player
-     * @author Kvnamo
-     */
-    public void npcDamage(final EntityDamageEvent event, final ACPlayer damager) {
-                
-        // Falling will not damage
-        if(DamageCause.FALL.equals(event.getCause())){
-            event.setCancelled(true);
-            return;
-        }
-        
-        // The assassin can damaged zombies
-        if(CharacterEnum.ASSASSIN.equals(damager.getCharacter())) return;
         
         event.setCancelled(true);
     }

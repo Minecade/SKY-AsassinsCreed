@@ -12,54 +12,54 @@ public class ACShop {
 
     /**
      * Shop items and skills
-     * @param player
+     * @param bukkitPlayer
      * @author Kvnamo
      */
-    public static void shop(Player player) {
+    public static void shop(Player bukkitPlayer) {
  
-        World world = player.getWorld();
-        Location location = player.getLocation();
+        World world = bukkitPlayer.getWorld();
+        Location location = bukkitPlayer.getLocation().getBlock().getLocation();
         
         // Top shop
         if(ACShop.getLocation(world, TopShopEnum.ARMOR.getX(), TopShopEnum.ARMOR.getY(), TopShopEnum.ARMOR.getZ()).equals(location)){
-            ACShop.buyTopShop(player, TopShopEnum.ARMOR);
+            ACShop.buyTopShop(bukkitPlayer, TopShopEnum.ARMOR);
         }
         else if(ACShop.getLocation(world, TopShopEnum.HEALTH.getX(), TopShopEnum.HEALTH.getY(), TopShopEnum.HEALTH.getZ()).equals(location)){
-            ACShop.buyTopShop(player, TopShopEnum.HEALTH);
+            ACShop.buyTopShop(bukkitPlayer, TopShopEnum.HEALTH);
         }
 //        else if(ACShop.getLocation(world, TopShopEnum.INVISIBILITY.getX(), TopShopEnum.INVISIBILITY.getY(), TopShopEnum.INVISIBILITY.getZ()).equals(location)){
 //            ACShop.buyTopShop(player, TopShopEnum.INVISIBILITY);
 //        }
         else if(ACShop.getLocation(world, TopShopEnum.JUMP.getX(), TopShopEnum.JUMP.getY(), TopShopEnum.JUMP.getZ()).equals(location)){
-            ACShop.buyTopShop(player, TopShopEnum.JUMP);
+            ACShop.buyTopShop(bukkitPlayer, TopShopEnum.JUMP);
         }
         else if(ACShop.getLocation(world, TopShopEnum.SPRINT.getX(), TopShopEnum.SPRINT.getY(), TopShopEnum.SPRINT.getZ()).equals(location)){
-            ACShop.buyTopShop(player, TopShopEnum.SPRINT);
+            ACShop.buyTopShop(bukkitPlayer, TopShopEnum.SPRINT);
         }
         //Lower shop
         else if(ACShop.getLocation(world, LowerShopEnum.BLACKALE.getX(), LowerShopEnum.BLACKALE.getY(), LowerShopEnum.BLACKALE.getZ()).equals(location)){
-            ACShop.buyLowerShop(player, LowerShopEnum.BLACKALE);
+            ACShop.buyLowerShop(bukkitPlayer, LowerShopEnum.BLACKALE);
         }
         else if(ACShop.getLocation(world, LowerShopEnum.BOARDINGAXE.getX(), LowerShopEnum.BOARDINGAXE.getY(), LowerShopEnum.BOARDINGAXE.getZ()).equals(location)){
-            ACShop.buyLowerShop(player, LowerShopEnum.BOARDINGAXE);
+            ACShop.buyLowerShop(bukkitPlayer, LowerShopEnum.BOARDINGAXE);
         }
         else if(ACShop.getLocation(world, LowerShopEnum.CUTLASS.getX(), LowerShopEnum.CUTLASS.getY(), LowerShopEnum.CUTLASS.getZ()).equals(location)){
-            ACShop.buyLowerShop(player, LowerShopEnum.CUTLASS);
+            ACShop.buyLowerShop(bukkitPlayer, LowerShopEnum.CUTLASS);
         }
         else if(ACShop.getLocation(world, LowerShopEnum.DECOOY.getX(), LowerShopEnum.DECOOY.getY(), LowerShopEnum.DECOOY.getZ()).equals(location)){
-            ACShop.buyLowerShop(player, LowerShopEnum.DECOOY);
+            ACShop.buyLowerShop(bukkitPlayer, LowerShopEnum.DECOOY);
         }
         else if(ACShop.getLocation(world, LowerShopEnum.GRENADE.getX(), LowerShopEnum.GRENADE.getY(), LowerShopEnum.GRENADE.getZ()).equals(location)){
-            ACShop.buyLowerShop(player, LowerShopEnum.GRENADE);
+            ACShop.buyLowerShop(bukkitPlayer, LowerShopEnum.GRENADE);
         }
         else if(ACShop.getLocation(world, LowerShopEnum.HIDDENBLADE.getX(), LowerShopEnum.HIDDENBLADE.getY(), LowerShopEnum.HIDDENBLADE.getZ()).equals(location)){
-            ACShop.buyLowerShop(player, LowerShopEnum.HIDDENBLADE);
+            ACShop.buyLowerShop(bukkitPlayer, LowerShopEnum.HIDDENBLADE);
         }
         else if(ACShop.getLocation(world, LowerShopEnum.SOMEKEBOMB.getX(), LowerShopEnum.SOMEKEBOMB.getY(), LowerShopEnum.SOMEKEBOMB.getZ()).equals(location)){
-            ACShop.buyLowerShop(player, LowerShopEnum.SOMEKEBOMB);
+            ACShop.buyLowerShop(bukkitPlayer, LowerShopEnum.SOMEKEBOMB);
         }
         else if(ACShop.getLocation(world, LowerShopEnum.TOMAHAWK.getX(), LowerShopEnum.TOMAHAWK.getY(), LowerShopEnum.TOMAHAWK.getZ()).equals(location)){
-            ACShop.buyLowerShop(player, LowerShopEnum.TOMAHAWK);
+            ACShop.buyLowerShop(bukkitPlayer, LowerShopEnum.TOMAHAWK);
         }
     }
        
@@ -71,12 +71,13 @@ public class ACShop {
      */
     private static void buyTopShop(Player player, TopShopEnum skill){
         
-        if (player.getExp() >= skill.getCost()){
-            player.setExp(player.getExp() - skill.getCost());
+        if (player.getLevel() >= skill.getCost()){
+            player.setLevel(player.getLevel() - skill.getCost());
             player.addPotionEffect(skill.getPotionEffect());
+            player.sendMessage(String.format("%sYou have buy %s skill.", ChatColor.YELLOW)); 
         }
         
-        player.sendMessage(String.format("%sYou do not have enough experience to buy this.", ChatColor.YELLOW)); 
+        player.sendMessage(String.format("%sYou do not have enough experience to buy this.", ChatColor.YELLOW, skill.name())); 
     }
     
     /**
@@ -86,9 +87,10 @@ public class ACShop {
      * @author Kvnamo
      */
     private static void buyLowerShop(Player player, LowerShopEnum item){
-        if (player.getExp() >= item.getCost()){
-            player.setExp(player.getExp() - item.getCost());
+        if (player.getLevel() >= item.getCost()){
+            player.setLevel(player.getLevel() - item.getCost());
             player.getInventory().addItem(item.getItem());
+            player.sendMessage(String.format("%sYou have buy %s item.", ChatColor.YELLOW, item.name())); 
         }
         
         player.sendMessage(String.format("%sYou do not have enough experience to buy this.", ChatColor.YELLOW)); 

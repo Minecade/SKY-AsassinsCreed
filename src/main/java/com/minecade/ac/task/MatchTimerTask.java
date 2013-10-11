@@ -35,7 +35,7 @@ public class MatchTimerTask extends BukkitRunnable{
         
         // Gains 1 level every 10 seconds
         if(this.countdown % 10 == 0){
-            assassin.setExp(assassin.getExp() + 1);
+            assassin.setLevel(assassin.getLevel() + 1);
         }
         
         this.countdown--;

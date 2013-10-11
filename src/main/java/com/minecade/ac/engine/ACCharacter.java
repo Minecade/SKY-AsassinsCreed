@@ -87,6 +87,7 @@ public class ACCharacter {
         // Set characteristics
         zombie.setHealth(20);
         zombie.setTarget(null);
+        zombie.setVillager(false);
         zombie.setCustomName(npc.name());
         
         // Set equipment
