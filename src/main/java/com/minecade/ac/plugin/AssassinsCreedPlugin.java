@@ -154,6 +154,6 @@ public class AssassinsCreedPlugin extends MinecadePlugin {
      */
     @Override
     public String forceStart() {
-        return null;//this.game.forceStartMatch();
+        return this.game.forceStartMatch();
     }
 }

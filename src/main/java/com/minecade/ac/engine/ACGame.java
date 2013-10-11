@@ -213,6 +213,9 @@ public class ACGame {
                         }
                     }
                 }
+                
+                // if match players is reached break
+                if(this.nextMatchPlayers.size() == this.matchRequiredPlayers) break;
             }
             
             // Update score board
@@ -235,6 +238,55 @@ public class ACGame {
             match.init(this.nextMatchPlayers);
             this.nextMatchPlayers.clear();
         }
+    }
+    
+    /**
+     * Force start match
+     * @author Kvnamo
+     */
+    public String forceStartMatch() {
+        
+        if(this.nextMatchPlayers.size() > 0){
+            return "You can't do this rigth now. A match is about to start.";
+        }
+        
+        ACMatch availablematch = null;
+        List<ACPlayer> nextMatchPlayers = new ArrayList<ACPlayer>();
+        
+        // Get available match 
+        for (ACMatch match : this.matches) {
+            if(MatchStatusEnum.STOPPED.equals(match.getStatus())){
+
+                availablematch = match; 
+                        
+                // Select next match players
+                for (ACPlayer player : this.players.values()) {
+                    
+                    if(player.getCurrentMatch() == null){
+                        player.setCurrentMatch(match);
+                        nextMatchPlayers.add(player);
+                        
+                        // Announce next match players
+                        player.getBukkitPlayer().sendMessage(String.format("%sYou are going to the next match on %s!", 
+                            ChatColor.YELLOW, match.getACWorld().getName()));
+                        
+                        // if match players is reached break
+                        if(nextMatchPlayers.size() == this.matchRequiredPlayers) break;
+                    }
+                }
+            }
+            
+            // if match players is reached break
+            if(nextMatchPlayers.size() == this.matchRequiredPlayers) break;
+        }
+       
+        // Check if there is a match available
+        if(availablematch != null){
+            availablematch.init(this.nextMatchPlayers);
+            return null;
+        }
+        
+        return "There is no match available now for doing this. Please wait for one of them to finish."; 
     }
 
     /**
@@ -546,6 +598,4 @@ public class ACGame {
             }
         }
     }
-
-
 }
