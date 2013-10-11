@@ -78,7 +78,7 @@ public class ACGame {
      * @author Kvnamo
      */
     public ACScoreboard getACScoreboard(){
-        return acScoreboard;
+        return this.acScoreboard;
     }
     
     /**
