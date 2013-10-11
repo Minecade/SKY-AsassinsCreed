@@ -10,13 +10,16 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Zombie;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -334,8 +337,6 @@ public class ACGame {
         // If the player was damaged
         if(event.getEntity() instanceof Player){
             
-            plugin.getServer().getLogger().severe("Player");
-            
             final ACPlayer player = this.players.get(((Player)event.getEntity()).getName());
             final ACMatch match = player.getCurrentMatch();
             
@@ -352,7 +353,7 @@ public class ACGame {
             
             event.setCancelled(true);
         }
-        else if(DamageCause.ENTITY_ATTACK.equals(event.getCause())){
+        else if(event.getEntity() instanceof Zombie && DamageCause.ENTITY_ATTACK.equals(event.getCause())){
             
             final ACPlayer damager = this.players.get(((Player)((EntityDamageByEntityEvent) event).getDamager()).getName());
             final ACMatch match = damager.getCurrentMatch();
@@ -384,7 +385,7 @@ public class ACGame {
     }
     
     /**
-     * On player interact event
+     * On player interact 
      * @param event
      * @author Kvnamo
      */
@@ -409,7 +410,10 @@ public class ACGame {
                     CharacterEnum.ASSASSIN.equals(player.getCharacter()) && !player.isCooling()){
                     
                     // Start invisibility.
-                    new InvisibilityTask(player, 1).runTaskTimer(plugin, 10, 200l);
+                    new InvisibilityTask(player).runTaskTimer(plugin, 10, 200l);
+                    
+                    player.getBukkitPlayer().sendMessage(String.format(
+                            "%sYou are invisible.", ChatColor.AQUA));
                 }
                 else bukkitPlayer.sendMessage(String.format(
                     "%sYou are cooling down. Wait for use invisibility again.", ChatColor.AQUA));                   
@@ -422,11 +426,25 @@ public class ACGame {
             
             if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) && 
                 CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-                ACShop.shop(bukkitPlayer);
-            }
+                ACShop.shop(player);
+            } 
             else event.setCancelled(true);
         }
         else if(event.getClickedBlock() != null && !event.getPlayer().isOp()) event.setCancelled(true);
+    }
+    
+    /**
+     * on projectile hit 
+     * @param event
+     * @author Kvnamo
+     */
+    public void projectileHit(ProjectileHitEvent event) {
+        Projectile projectile = event.getEntity();
+
+        // If player throws an Arrow remove it from world
+        if(EntityType.ARROW.equals(projectile.getType())){
+            projectile.remove();
+        }
     }
     
     /**
@@ -529,5 +547,5 @@ public class ACGame {
         }
     }
 
-    
+
 }

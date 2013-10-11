@@ -9,6 +9,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.LeavesDecayEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
@@ -119,6 +120,26 @@ public class ACListener implements Listener{
        this.plugin.getGame().playerInteract(event);
    }
    
+   /**
+    * Call by ProjectileHitEvent handler when projectile hits something.
+    * @param event
+    * @author kvnamo
+    */
+   @EventHandler
+   public void onProjectileHitEvent(ProjectileHitEvent event){
+       this.plugin.getGame().projectileHit(event);
+   }
+   
+   /** 
+    * Call by AsyncPlayerChatEvent on player chat
+    * @param event
+    * @author kvnamo
+    */
+   @EventHandler
+   public void onPlayerChat(AsyncPlayerChatEvent event) {
+       this.plugin.getGame().chatMessage(event);
+   }
+   
     /**
      * On inventory open.
      * @param InventoryOpenEvent
@@ -129,36 +150,6 @@ public class ACListener implements Listener{
         if (event.getInventory().getHolder() instanceof Chest || event.getInventory().getHolder() instanceof DoubleChest){
             event.setCancelled(true);
         }
-    }
-    
-//    /**
-//     * Call by PlayerInteractEvent handler when player interacts.
-//     * @param playerInteractEvent
-//     * @author kvnamo
-//     */
-//    @EventHandler
-//    public void onEntityShootBow(EntityShootBowEvent  event) {
-//        this.plugin.getGame().playerShootBow(event);
-//    }
-//    
-//    /**
-//     * Call by ProjectileHitEvent handler when projectile hits something.
-//     * @param event
-//     * @author kvnamo
-//     */
-//    @EventHandler
-//    public void onProjectileHitEvent(ProjectileHitEvent event){
-//        this.plugin.getGame().projectileHit(event);
-//    }
-//        
-    /** 
-     * Call by AsyncPlayerChatEvent on player chat
-     * @param event
-     * @author kvnamo
-     */
-    @EventHandler
-    public void onPlayerChat(AsyncPlayerChatEvent event) {
-        this.plugin.getGame().chatMessage(event);
     }
     
     /**

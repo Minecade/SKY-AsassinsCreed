@@ -20,6 +20,15 @@ import org.bukkit.potion.PotionType;
 public class ACInventory {
     
     /**
+     * Arrow
+     * @return Arrow
+     * @author kvnamo
+     */
+    public static ItemStack getArrow() {
+        return new ItemStack(Material.ARROW, 1);
+    }
+    
+    /**
      * Black Ale
      * @return Black Ale
      * @author kvnamo

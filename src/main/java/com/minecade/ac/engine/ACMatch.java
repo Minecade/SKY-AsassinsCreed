@@ -391,8 +391,6 @@ public class ACMatch {
      * @author Kvnamo
      */
     public void playerDamage(final EntityDamageEvent event, final ACPlayer player) {
-              
-        plugin.getServer().getLogger().severe("playerDamage");
         
         // Falling will not damage
         if(DamageCause.FALL.equals(event.getCause())){
@@ -410,6 +408,8 @@ public class ACMatch {
         
         // Get enemy
         final ACPlayer enemy = this.players.get(((Player)((EntityDamageByEntityEvent) event).getDamager()).getName());
+        
+        plugin.getServer().getLogger().severe("enemy:" + enemy.getCharacter());
         
         // The assassin can damaged anyone
         if(CharacterEnum.ASSASSIN.equals(enemy.getCharacter())) return;

@@ -15,26 +15,27 @@ public class ACShop {
      * @param bukkitPlayer
      * @author Kvnamo
      */
-    public static void shop(Player bukkitPlayer) {
+    public static void shop(ACPlayer player) {
  
+        Player bukkitPlayer = player.getBukkitPlayer();
         World world = bukkitPlayer.getWorld();
         Location location = bukkitPlayer.getLocation().getBlock().getLocation();
         
         // Top shop
         if(ACShop.getLocation(world, TopShopEnum.ARMOR.getX(), TopShopEnum.ARMOR.getY(), TopShopEnum.ARMOR.getZ()).equals(location)){
-            ACShop.buyTopShop(bukkitPlayer, TopShopEnum.ARMOR);
+            ACShop.buyTopShop(player, TopShopEnum.ARMOR);
         }
         else if(ACShop.getLocation(world, TopShopEnum.HEALTH.getX(), TopShopEnum.HEALTH.getY(), TopShopEnum.HEALTH.getZ()).equals(location)){
-            ACShop.buyTopShop(bukkitPlayer, TopShopEnum.HEALTH);
+            ACShop.buyTopShop(player, TopShopEnum.HEALTH);
         }
-//        else if(ACShop.getLocation(world, TopShopEnum.INVISIBILITY.getX(), TopShopEnum.INVISIBILITY.getY(), TopShopEnum.INVISIBILITY.getZ()).equals(location)){
-//            ACShop.buyTopShop(player, TopShopEnum.INVISIBILITY);
-//        }
+        else if(ACShop.getLocation(world, TopShopEnum.INVISIBILITY.getX(), TopShopEnum.INVISIBILITY.getY(), TopShopEnum.INVISIBILITY.getZ()).equals(location)){
+            ACShop.buyTopShop(player, TopShopEnum.INVISIBILITY);
+        }
         else if(ACShop.getLocation(world, TopShopEnum.JUMP.getX(), TopShopEnum.JUMP.getY(), TopShopEnum.JUMP.getZ()).equals(location)){
-            ACShop.buyTopShop(bukkitPlayer, TopShopEnum.JUMP);
+            ACShop.buyTopShop(player, TopShopEnum.JUMP);
         }
         else if(ACShop.getLocation(world, TopShopEnum.SPRINT.getX(), TopShopEnum.SPRINT.getY(), TopShopEnum.SPRINT.getZ()).equals(location)){
-            ACShop.buyTopShop(bukkitPlayer, TopShopEnum.SPRINT);
+            ACShop.buyTopShop(player, TopShopEnum.SPRINT);
         }
         //Lower shop
         else if(ACShop.getLocation(world, LowerShopEnum.BLACKALE.getX(), LowerShopEnum.BLACKALE.getY(), LowerShopEnum.BLACKALE.getZ()).equals(location)){
@@ -65,19 +66,26 @@ public class ACShop {
        
     /**
      * Buy skills in top shop
-     * @param player
+     * @param acplayer
      * @param skill
      * @author Kvnamo
      */
-    private static void buyTopShop(Player player, TopShopEnum skill){
+    private static void buyTopShop(ACPlayer player, TopShopEnum skill){
         
-        if (player.getLevel() >= skill.getCost()){
-            player.setLevel(player.getLevel() - skill.getCost());
-            player.addPotionEffect(skill.getPotionEffect());
-            player.sendMessage(String.format("%sYou have buy %s skill.", ChatColor.YELLOW)); 
+        Player bukkitPlayer = player.getBukkitPlayer();
+        
+        if (bukkitPlayer.getLevel() >= skill.getCost()){
+            bukkitPlayer.setLevel(bukkitPlayer.getLevel() - skill.getCost());
+            
+            // If the player bought invisibility
+            if(TopShopEnum.INVISIBILITY.equals(skill)) player.setInvisibilityTime(2);
+            else bukkitPlayer.addPotionEffect(skill.getPotionEffect());
+            
+            bukkitPlayer.sendMessage(String.format("%sYou have bought %s skill.", ChatColor.YELLOW, skill.name()));
+            return;
         }
         
-        player.sendMessage(String.format("%sYou do not have enough experience to buy this.", ChatColor.YELLOW, skill.name())); 
+        bukkitPlayer.sendMessage(String.format("%sYou do not have enough level experience to buy %s skill.", ChatColor.YELLOW, skill.name())); 
     }
     
     /**
@@ -86,14 +94,16 @@ public class ACShop {
      * @param item
      * @author Kvnamo
      */
-    private static void buyLowerShop(Player player, LowerShopEnum item){
-        if (player.getLevel() >= item.getCost()){
-            player.setLevel(player.getLevel() - item.getCost());
-            player.getInventory().addItem(item.getItem());
-            player.sendMessage(String.format("%sYou have buy %s item.", ChatColor.YELLOW, item.name())); 
+    private static void buyLowerShop(Player bukkitPlayer, LowerShopEnum item){
+        
+        if (bukkitPlayer.getLevel() >= item.getCost()){
+            bukkitPlayer.setLevel(bukkitPlayer.getLevel() - item.getCost());
+            bukkitPlayer.getInventory().addItem(item.getItem());
+            bukkitPlayer.sendMessage(String.format("%sYou have bought %s item.", ChatColor.YELLOW, item.name()));
+            return;
         }
         
-        player.sendMessage(String.format("%sYou do not have enough experience to buy this.", ChatColor.YELLOW)); 
+        bukkitPlayer.sendMessage(String.format("%sYou do not have enough level experience to buy %s item.", ChatColor.YELLOW, item.name())); 
     }
     
     /**

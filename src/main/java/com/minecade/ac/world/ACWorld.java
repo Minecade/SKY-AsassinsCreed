@@ -116,7 +116,7 @@ public abstract class ACWorld extends MinecadeWorld{
         this.shipLocation = new Location(super.world, -169, 114, 34);
         
         // Set navy spawn locations.
-        this.navyLocation = new Location(super.world, -170, 113, 18);
+        this.navyLocation = new Location(super.world, -190, 116, -44);
         this.navyRooomLocation = new Location(super.world, -161, 96, -49);
         this.bodyguardLocation = new Location(super.world, -149, 96, -47);
         this.musketeerLocation = new Location(super.world, -149, 96, -50);

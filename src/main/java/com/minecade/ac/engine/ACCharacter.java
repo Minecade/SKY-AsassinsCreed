@@ -26,6 +26,7 @@ public class ACCharacter {
             case ASSASSIN:
                 // Set default lives
                 player.setLives(3);
+                player.setInvisibilityTime(1);
                 player.getBukkitPlayer().setLevel(1);
              
                 // Set potions
@@ -56,6 +57,8 @@ public class ACCharacter {
                 
                 // Set inventory
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getStrongCane());
+                player.getBukkitPlayer().getInventory().addItem(ACInventory.getBow());
+                player.getBukkitPlayer().getInventory().addItem(ACInventory.getArrow());
                 player.getBukkitPlayer().sendMessage(String.format("%sNavy: You are a Musketeer!", ChatColor.BLUE));
                 break;
                 
@@ -85,8 +88,8 @@ public class ACCharacter {
     public static void setupZombie(Zombie zombie, NPCEnum npc){
         
         // Set characteristics
-        zombie.setHealth(20);
         zombie.setTarget(null);
+        zombie.setMaxHealth(30);
         zombie.setVillager(false);
         zombie.setCustomName(npc.name());
         

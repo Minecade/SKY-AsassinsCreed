@@ -10,8 +10,6 @@ public class InvisibilityTask extends BukkitRunnable{
 
     final private ACPlayer player;
     
-    private int invisibilityTime;
-    
     private int coolingTime;
     
     /**
@@ -19,10 +17,9 @@ public class InvisibilityTask extends BukkitRunnable{
      * @param assasin
      * @author kvnamo
      */
-    public InvisibilityTask(final ACPlayer player, int invisibilityTime){
+    public InvisibilityTask(final ACPlayer player){
         this.player = player;
         this.coolingTime = 0;
-        this.invisibilityTime = invisibilityTime;
     }
     
     /**
@@ -44,10 +41,8 @@ public class InvisibilityTask extends BukkitRunnable{
             this.player.getCurrentMatch().hidePlayer(this.player.getBukkitPlayer(), true);
         }
         // 1 is equal to 10 seconds
-        else if(this.coolingTime == invisibilityTime){
+        else if(this.coolingTime == player.getInvisibilityTime()){
             this.player.getCurrentMatch().hidePlayer(this.player.getBukkitPlayer(), false);
-            this.player.getBukkitPlayer().sendMessage(String.format(
-                "%sYou are invisible.", ChatColor.AQUA));
         }
         // 3 is equal to 30 seconds
         else if(this.coolingTime == 3){

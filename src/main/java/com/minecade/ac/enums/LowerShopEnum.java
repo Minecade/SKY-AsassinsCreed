@@ -7,21 +7,21 @@ import com.minecade.ac.engine.ACInventory;
 
 public enum LowerShopEnum implements ACShopInventory{
 
-    BLACKALE(5, ACInventory.getBlackAle(), -172, 108, 21),
+    BLACKALE(5, ACInventory.getBlackAle(), -172, 107, 21),
     
-    BOARDINGAXE(4, ACInventory.getBoardingAxe(), -170, 108, 15),
+    BOARDINGAXE(4, ACInventory.getBoardingAxe(), -170, 107, 15),
     
-    CUTLASS(5, ACInventory.getCutLass(), -166, 108, 15), 
+    CUTLASS(5, ACInventory.getCutLass(), -166, 107, 15), 
     
-    DECOOY(3, ACInventory.getDecoy(), -166, 108, 21),
+    DECOOY(3, ACInventory.getDecoy(), -166, 107, 21),
     
-    GRENADE(8, ACInventory.getGranade(), -170, 108, 21),
+    GRENADE(8, ACInventory.getGranade(), -170, 107, 21),
     
-    HIDDENBLADE(1, ACInventory.getHiddenBlade(), -172, 108, 15), 
+    HIDDENBLADE(1, ACInventory.getHiddenBlade(), -172, 107, 15), 
     
-    SOMEKEBOMB(1, ACInventory.getSmokeBomb(), -168, 108, 21),
+    SOMEKEBOMB(1, ACInventory.getSmokeBomb(), -168, 107, 21),
     
-    TOMAHAWK(1, ACInventory.getTomaHawk(), -168, 108, 15);
+    TOMAHAWK(1, ACInventory.getTomaHawk(), -168, 107, 15);
     
     private int cost;
     

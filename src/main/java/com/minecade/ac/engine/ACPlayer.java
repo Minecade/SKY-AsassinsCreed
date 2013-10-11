@@ -127,6 +127,26 @@ public class ACPlayer{
         this.lives = lives;
     }
     
+    private int invisibilityTime;
+    
+    /**
+     * Is invisibility time
+     * @return invisibility time
+     * @author Kvnamo
+     */
+    public int getInvisibilityTime(){
+        return this.invisibilityTime;
+    }
+    
+    /**
+     * Set invisibility time
+     * @param invisibility time
+     * @author Kvnamo
+     */
+    public void setInvisibilityTime(int invisibilityTime){
+        this.invisibilityTime = invisibilityTime;
+    }
+    
     private boolean cooling;
     
     /**

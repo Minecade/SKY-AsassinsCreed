@@ -6,15 +6,15 @@ import org.bukkit.potion.PotionEffectType;
 
 public enum TopShopEnum implements ACShopInventory{
 
-    ARMOR(8, new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Integer.MAX_VALUE, 2), -172, 115, 36),
+    ARMOR(8, new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Integer.MAX_VALUE, 2), -172, 114, 36),
     
-    HEALTH(5, new PotionEffect(PotionEffectType.HEALTH_BOOST, Integer.MAX_VALUE, 3), -167, 115, 35), 
+    HEALTH(5, new PotionEffect(PotionEffectType.HEALTH_BOOST, Integer.MAX_VALUE, 3), -167, 114, 35), 
     
-    INVISIBILITY(8, new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0), -168, 115, 36),
+    INVISIBILITY(8, null, -168, 114, 36),
     
-    JUMP(1, new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, 2), -167, 115, 33),        
+    JUMP(1, new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, 2), -167, 114, 33),        
     
-    SPRINT(1, new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1), -170, 115, 36);
+    SPRINT(1, new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1), -170, 114, 36);
     
     private int cost;
 
