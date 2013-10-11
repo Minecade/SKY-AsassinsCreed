@@ -251,6 +251,9 @@ public class ACMatch {
                 
                 // Clear collections and task
                 ACMatch.this.players.clear();
+                
+                // Set match status
+                ACMatch.this.status = MatchStatusEnum.STOPPED;
             }
         }, 150L);
         
