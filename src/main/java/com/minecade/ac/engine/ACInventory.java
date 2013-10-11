@@ -224,8 +224,8 @@ public class ACInventory {
             String.format("%s\nDotted around the map are stashs of loot that the assassin can collect to buy more " +
             		"powerful upgrades. He also earns money slowly over time and for every kill he commits...", ChatColor.DARK_GRAY),
             String.format("%s\nThe assassin has 3 lives, the Navy have unlimited, but stay dead for a long time. " +
-        		"Only 1 NPC has to be alive at the end for the assassin to fail.", ChatColor.DARK_GRAY),
-            String.format("%s\nThe assassin may use /topshop or /lowershop commands to travel to shops buildings. ", ChatColor.DARK_GRAY));
+        		"Only 1 NPC has to be alive at the end for the assassin to fail...", ChatColor.DARK_GRAY),
+            String.format("%s\nThe assassin may use /topshop or /lowershop commands to travel to shops buildings.", ChatColor.DARK_GRAY));
         
         book.setItemMeta(bookMeta);
         
