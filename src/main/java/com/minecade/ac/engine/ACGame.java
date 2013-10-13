@@ -589,7 +589,7 @@ public class ACGame {
      * @param format
      * @author Kvnamo
      */
-    private void broadcastMessage(String message) {
+    public void broadcastMessage(String message) {
         
         // Send message only to players in lobby
         for (ACPlayer player : this.players.values()) {

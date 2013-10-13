@@ -178,6 +178,7 @@ public class ACMatch {
                     if(this.timerTask != null) this.timerTask.cancel();
                     this.timerTask = new MatchTimerTask(this, player.getBukkitPlayer(), this.time);
                     this.timerTask.runTaskTimer(plugin, 10, 20l);
+                    break;
                 }
             }
         }
@@ -249,23 +250,23 @@ public class ACMatch {
                     }
                 }
                 
-                // Clear collections and task
+                // Announce match winners in lobby
+                ACMatch.this.plugin.getGame().broadcastMessage(String.format("%sThanks for playing on %s! The %s wins!", 
+                    ACMatch.this.npcs == 0 ? ChatColor.RED : ChatColor.BLUE, ACMatch.this.npcs == 0 ? "Assassin" : "Navy"));
+                
+                // Clear all
                 ACMatch.this.players.clear();
+                ACMatch.this.prisioners.clear();
+                ACMatch.this.timerTask.cancel();
+                ACMatch.this.acScoreboard = null;
                 
                 // Set match status
                 ACMatch.this.status = MatchStatusEnum.STOPPED;
             }
         }, 150L);
         
-        // Clear collections and task
-        this.prisioners.clear();
-        this.timerTask.cancel();
-        this.acScoreboard = null;
-        
         // Announce finish
-        this.broadcastMessage(String.format("%sMatch finished! The %s wins!", 
-            this.npcs == 0 ? ChatColor.RED : ChatColor.BLUE, this.npcs == 0 ? "Assassin" : "Navy"));
-        
+        this.broadcastMessage(String.format("%sMatch finished!", ChatColor.RED));
     }
     
     /**
@@ -273,18 +274,17 @@ public class ACMatch {
      * @param playerName
      * @author Kvnamo
      */
-    public void playerQuit(final ACPlayer playerName) {
+    public void playerQuit(final ACPlayer player) {
         
         // Remove from players list
-        ACPlayer player = this.players.get(playerName.getBukkitPlayer().getName());
-        this.players.remove(playerName.getBukkitPlayer().getName());
+        this.players.remove(player.getBukkitPlayer().getName());
         
         // Save player stats
         player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
         player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.countdown);
         this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
         
-        if(CharacterEnum.ASSASSIN.equals(player.getCharacter())) this.finish();
+        if(CharacterEnum.ASSASSIN.equals(player.getCharacter()) || this.players.size() == 1) this.finish();
     }
     
     /**
