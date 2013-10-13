@@ -82,6 +82,28 @@ public class ACGame {
     }
     
     /**
+     * Player to start a next match
+     * @return players needed to start
+     * @author Kvnamo
+     */
+    private int getPlayersToStart(){
+        
+        int playersToStart = this.matchRequiredPlayers;
+        
+        // Send message only to players in lobby
+        for (ACPlayer player : this.players.values()) {
+            
+            // Subtract players to start
+            if(player.getCurrentMatch() == null) playersToStart--;
+            
+            // Check if we can start
+            if(playersToStart == 0) break;
+        }
+        
+        return playersToStart;
+    }
+    
+    /**
      * ACGame constructor
      * @param plugin
      * @author kvnamo
@@ -184,7 +206,7 @@ public class ACGame {
      */
     public synchronized void preInitNextMatch(){
         
-        if(this.players.size() >= this.matchRequiredPlayers){
+        if(this.getPlayersToStart() == 0){
         
             this.matchCountdown = plugin.getConfig().getInt("match.start-countdown");
             
@@ -217,12 +239,10 @@ public class ACGame {
                 // if match players is reached break
                 if(this.nextMatchPlayers.size() == this.matchRequiredPlayers) break;
             }
-            
-            // Update score board
-            this.acScoreboard.setPlayersToStart(0);
         }
+        
         // Update score board
-        else this.acScoreboard.setPlayersToStart(this.matchRequiredPlayers - this.players.size());
+        this.acScoreboard.setPlayersToStart(this.getPlayersToStart());
     }
 
     /**
@@ -324,9 +344,9 @@ public class ACGame {
             // If there is no player stop timer and wait.
             if(this.nextMatchPlayers.size() < this.matchRequiredPlayers){
                 this.timerTask.cancel();
-                this.acScoreboard.setPlayersToStart(this.players.size());
             }
             
+            this.acScoreboard.setPlayersToStart(this.getPlayersToStart());
             this.broadcastMessage(String.format("%s%s %squit the game.", ChatColor.RED, playerName, ChatColor.GRAY));
         }
         else match.playerQuit(player);

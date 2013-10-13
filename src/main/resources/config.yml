@@ -2,18 +2,10 @@
 # Tip: sort properties alphabetically. Even nested ones! #
 # Tip: all property keys lowercase!!!                    #
 # ------------------------------------------------------ #
-
+           
 # Entities root packages
 entities:
     package: 'com.minecade.ac.data'
-    
-# Central Database
-minecade:
-    central-database:
-        driver: com.mysql.jdbc.Driver
-        password: root
-        url: jdbc:mysql://localhost:3306/sky_network
-        username: root
 
 # Lobby
 lobby:
@@ -35,6 +27,14 @@ match:
     required-players: 6 # Minimun Players needed to start the match.
     start-countdown: 10 # Time to begin each match
     time: 360 # Match duration time in seconds (5 minutes).
+  
+# Central Database
+minecade:
+    central-database:
+        driver: com.mysql.jdbc.Driver
+        password: root
+        url: jdbc:mysql://localhost:3306/sky_network
+        username: root 
    
 # Server
 server:
