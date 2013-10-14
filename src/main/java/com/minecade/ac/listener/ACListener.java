@@ -78,6 +78,8 @@ public class ACListener implements Listener{
      @EventHandler
      public void onEtityDeath(EntityDeathEvent event) {
          this.plugin.getGame().entityDeath(event);
+         event.getDrops().clear();
+         event.setDroppedExp(0);
      }
      
       /**
