@@ -326,6 +326,8 @@ public class ACGame {
         
         // The player is in the lobby
         if (match == null){
+            // Update scoreboard
+            this.acScoreboard.setPlayersToStart(this.getPlayersToStart());
             this.broadcastMessage(String.format("%s%s %squit the game.", ChatColor.RED, playerName, ChatColor.GRAY));
         }
         else if(MatchStatusEnum.STOPPED.equals(match.getStatus())){
