@@ -124,7 +124,7 @@ public class ACMatch {
                 
                 player.getBukkitPlayer().teleport(this.acWorld.getShipLocation());
                 player.setCharacter(CharacterEnum.ASSASSIN);
-                ACCharacter.setupAssassin(player);
+                ACCharacter.assassin(player);
                 
                 // Setup assassin scoreboard lives
                 this.acScoreboard.setAssassinLives(player.getLives());
@@ -150,7 +150,7 @@ public class ACMatch {
             location = this.getACWorld().getNPCLocation(npc);
             
             // Spawn npc
-            ACCharacter.setupZombie((Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE), npc);
+            ACCharacter.zombie((Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE), npc);
         }
         
         // Set match scoreboard
@@ -353,7 +353,7 @@ public class ACMatch {
             int lives = player.getLives(); 
             
             if(player.getLives() > 0){
-                ACCharacter.setupAssassin(player);
+                ACCharacter.assassin(player);
                 player.setLives(lives);
                 event.setRespawnLocation(this.acWorld.getShipLocation());
                 
@@ -470,17 +470,17 @@ public class ACMatch {
         if(this.acWorld.getBodyguardLocation().equals(location)){
             player.getBukkitPlayer().teleport(this.acWorld.getNavyLocation());
             player.setCharacter(CharacterEnum.BODYGUARD);
-            ACCharacter.setupBodyguard(player);
+            ACCharacter.bodyguard(player);
         }
         else if(this.acWorld.getMusketeerLocation().equals(location)){
             player.getBukkitPlayer().teleport(this.acWorld.getNavyLocation());
             player.setCharacter(CharacterEnum.MUSKETEER);
-            ACCharacter.setupMusketeer(player);
+            ACCharacter.musketeer(player);
         }
         else if(this.acWorld.getSwordsmanLocation().equals(location)){
             player.getBukkitPlayer().teleport(this.acWorld.getNavyLocation());
             player.setCharacter(CharacterEnum.SWORDSMAN);
-            ACCharacter.setupSwordsman(player);
+            ACCharacter.swordsman(player);
         }
     }
     

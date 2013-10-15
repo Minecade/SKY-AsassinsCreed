@@ -17,7 +17,7 @@ public class ACCharacter {
      * @param player
      * @author Kvnamo
      */
-    public static void setupAssassin(final ACPlayer player) { 
+    public static void assassin(final ACPlayer player) { 
         
         // Clear player
         EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
@@ -37,7 +37,7 @@ public class ACCharacter {
      * @param player
      * @author Kvnamo
      */
-    public static void setupBodyguard(final ACPlayer player) { 
+    public static void bodyguard(final ACPlayer player) { 
         
         // Clear player
         EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
@@ -60,7 +60,7 @@ public class ACCharacter {
      * @param player
      * @author Kvnamo
      */
-    public static void setupMusketeer(final ACPlayer player) {
+    public static void musketeer(final ACPlayer player) {
         
         // Clear player
         EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
@@ -83,7 +83,7 @@ public class ACCharacter {
      * @param player
      * @author Kvnamo
      */
-    public static void setupSwordsman(final ACPlayer player) {
+    public static void swordsman(final ACPlayer player) {
         
         // Clear player
         EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
@@ -105,7 +105,7 @@ public class ACCharacter {
      * @param zombie
      * @author Kvnamo
      */
-    public static void setupZombie(Zombie zombie, NPCEnum npc){
+    public static void zombie(Zombie zombie, NPCEnum npc){
         
         // Set characteristics
         zombie.setTarget(null);
