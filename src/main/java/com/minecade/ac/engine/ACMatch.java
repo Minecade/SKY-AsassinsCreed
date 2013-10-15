@@ -124,7 +124,7 @@ public class ACMatch {
                 
                 player.getBukkitPlayer().teleport(this.acWorld.getShipLocation());
                 player.setCharacter(CharacterEnum.ASSASSIN);
-                ACCharacter.setupPlayer(player);
+                ACCharacter.setupAssassin(player);
                 
                 // Setup assassin scoreboard lives
                 this.acScoreboard.setAssassinLives(player.getLives());
@@ -353,7 +353,7 @@ public class ACMatch {
             int lives = player.getLives(); 
             
             if(player.getLives() > 0){
-                ACCharacter.setupPlayer(player);
+                ACCharacter.setupAssassin(player);
                 player.setLives(lives);
                 event.setRespawnLocation(this.acWorld.getShipLocation());
                 
@@ -470,17 +470,17 @@ public class ACMatch {
         if(this.acWorld.getBodyguardLocation().equals(location)){
             player.getBukkitPlayer().teleport(this.acWorld.getNavyLocation());
             player.setCharacter(CharacterEnum.BODYGUARD);
-            ACCharacter.setupPlayer(player);
+            ACCharacter.setupBodyguard(player);
         }
         else if(this.acWorld.getMusketeerLocation().equals(location)){
             player.getBukkitPlayer().teleport(this.acWorld.getNavyLocation());
             player.setCharacter(CharacterEnum.MUSKETEER);
-            ACCharacter.setupPlayer(player);
+            ACCharacter.setupMusketeer(player);
         }
         else if(this.acWorld.getSwordsmanLocation().equals(location)){
             player.getBukkitPlayer().teleport(this.acWorld.getNavyLocation());
             player.setCharacter(CharacterEnum.SWORDSMAN);
-            ACCharacter.setupPlayer(player);
+            ACCharacter.setupSwordsman(player);
         }
     }
     
