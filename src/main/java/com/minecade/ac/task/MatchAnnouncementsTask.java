@@ -20,17 +20,6 @@ public class MatchAnnouncementsTask extends BukkitRunnable{
     public Random random = new Random();
     
     /**
-     * Gets the random announcement.
-     * @return the random announcement
-     * @author kvnamo
-     */
-    public String getRandomAnnouncement() {
-        
-        return ChatColor.translateAlternateColorCodes('&', this.announcements.get(
-            random.nextInt(this.announcements.size())));
-    }
-    
-    /**
      * MatchAnnouncementsTask constructor
      * @param match
      * @author Kvnamo
