@@ -147,7 +147,7 @@ public class ACGame {
             world.setSpawnLocation(this.lobby.getBlockX(), this.lobby.getBlockY(), this.lobby.getBlockZ());
         }
     }
-
+    
     /**
      * Init the matches.
      * @author Kvnamo
@@ -161,6 +161,7 @@ public class ACGame {
         this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(2), this.matchRequiredPlayers));
         this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(3), this.matchRequiredPlayers));
     }
+    
     
     /**
      * Call when player join the match

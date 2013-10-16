@@ -25,6 +25,7 @@ import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.enums.MatchStatusEnum;
 import com.minecade.ac.enums.NPCEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
+import com.minecade.ac.task.MatchAnnouncementsTask;
 import com.minecade.ac.task.MatchTimerTask;
 import com.minecade.ac.world.ACWorld;
 import com.minecade.engine.utils.EngineUtils;
@@ -46,6 +47,8 @@ public class ACMatch {
     private List<ACPlayer> prisioners = new ArrayList<ACPlayer>();
     
     private MatchTimerTask timerTask;
+    
+    private MatchAnnouncementsTask announcementsTask;
     
     private MatchStatusEnum status = MatchStatusEnum.STOPPED;
     
@@ -129,22 +132,17 @@ public class ACMatch {
                 // Setup assassin scoreboard lives
                 this.acScoreboard.setAssassinLives(player.getLives());
                 
-                // Messages
+                // Message
                 player.getBukkitPlayer().sendMessage(String.format(
-                    "%s%sMission: eliminate the 5 NPCs found in 5 buildings", ChatColor.BOLD, ChatColor.RED));
-                player.getBukkitPlayer().sendMessage(String.format(    
-                    "%suse /topshop or /lowershop commands to travel to shops buildings.", ChatColor.RED));
-                player.getBukkitPlayer().sendMessage(String.format(    
-                    "%sPressure plates on diamond blocks give the assassin 1 level.", ChatColor.RED));
+                    "%s%sYou are an Assassin. MISSION: Assassinate the 5 victims.", 
+                    ChatColor.RED, ChatColor.BOLD));
             }
             // Set navy
             else{
                 EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
                 player.getBukkitPlayer().teleport(this.acWorld.getNavyRoomLocation());
                 
-                 // Messages
-                player.getBukkitPlayer().sendMessage(String.format(
-                    "%s%sMission: defend the 5 NPCs found in 5 buildings", ChatColor.BOLD, ChatColor.BLUE));
+                 // Message
                 player.getBukkitPlayer().sendMessage(String.format(    
                     "%sChoose one Royal Navy character to begin.", ChatColor.BLUE));
             }
@@ -200,8 +198,12 @@ public class ACMatch {
         // Set match status
         this.status = MatchStatusEnum.RUNNING;
         
-        // Announce match started
+        // Announcements
         this.broadcastMessage(String.format("%sMatch started!", ChatColor.RED));
+        
+        if(this.announcementsTask != null) this.announcementsTask.cancel();
+        this.announcementsTask = new MatchAnnouncementsTask(this.plugin, this);
+        this.announcementsTask.runTaskTimer(this.plugin, 600l, 600l);
     }
     
     /**
@@ -278,6 +280,7 @@ public class ACMatch {
                 ACMatch.this.players.clear();
                 ACMatch.this.prisioners.clear();
                 ACMatch.this.timerTask.cancel();
+                ACMatch.this.announcementsTask.cancel();
                 ACMatch.this.acScoreboard = null;
                 
                 // Set match status

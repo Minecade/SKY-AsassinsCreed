@@ -24,6 +24,12 @@ logging-level: INFO
 
 # Match
 match:
+    announcements:
+    - '&dThe Assassin has to eliminate the 5 victims found in 5 buildings!'
+    - '&dThe Assassin may use /topshop or /lowershop commands to travel to shops buildings.!'
+    - '&dPressure plates on diamond blocks give the Assassin 1 level.!'
+    - '&dThe Royal Navy have to defend the 5 victims found in 5 buildings.!'
+    ban-message: 'You have been banned from sky servers. Appeal at http://skydoesminecraft.com/'
     required-players: 6 # Minimun Players needed to start the match.
     start-countdown: 10 # Time to begin each match
     time: 360 # Match duration time in seconds (5 minutes).

@@ -29,7 +29,6 @@ public class ACCharacter {
      
         // Set potions
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getInvisibleEmerald());
-        player.getBukkitPlayer().sendMessage(String.format("%sYou are the Assassin!", ChatColor.RED));
     }
     
     /**
@@ -52,7 +51,9 @@ public class ACCharacter {
         
         // Set inventory
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getSolidCane());
-        player.getBukkitPlayer().sendMessage(String.format("%sYou are a Bodyguard!", ChatColor.BLUE));
+        player.getBukkitPlayer().sendMessage(String.format(
+            "%s%sYou are a Royal Navy Bodyguard. MISSION: defend the 5 victims from the Assassin.", 
+            ChatColor.BLUE, ChatColor.BOLD));
     }
     
     /**
@@ -75,7 +76,9 @@ public class ACCharacter {
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getStrongCane());
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getBow());
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getArrow());
-        player.getBukkitPlayer().sendMessage(String.format("%sYou are a Musketeer!", ChatColor.BLUE)); 
+        player.getBukkitPlayer().sendMessage(String.format(
+            "%s%sYou are a Royal Navy Musketeer. MISSION: defend the 5 victims from the Assassin.", 
+            ChatColor.BLUE, ChatColor.BOLD)); 
     }
     
     /**
@@ -97,7 +100,9 @@ public class ACCharacter {
         // Set inventory
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getCane());
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getScimitar());
-        player.getBukkitPlayer().sendMessage(String.format("%sYou are a Swordsman!", ChatColor.BLUE));        
+        player.getBukkitPlayer().sendMessage(String.format(
+            "%s%sYou are a Royal Navy Swordsman. MISSION: defend the 5 victims from the Assassin.", 
+            ChatColor.BLUE, ChatColor.BOLD));        
     }
 
     /**
@@ -112,7 +117,7 @@ public class ACCharacter {
         zombie.setTarget(null);
         zombie.setMaxHealth(30);
         zombie.setVillager(false);
-        zombie.setCustomName(npc.name());
+        zombie.setCustomName(npc.getChatColor() + npc.name());
         
         // Set equipment
         EntityEquipment equipment = zombie.getEquipment();

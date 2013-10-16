@@ -1,14 +1,36 @@
 package com.minecade.ac.enums;
 
+import org.bukkit.ChatColor;
+
 public enum NPCEnum {
 
-    GREEN,
+    GREEN(ChatColor.GREEN),
     
-    GRAY,
+    GRAY(ChatColor.GRAY),
     
-    RED,
+    RED(ChatColor.RED),
     
-    YELLOW,
+    YELLOW(ChatColor.YELLOW),
     
-    WHITE
+    WHITE(ChatColor.WHITE);
+    
+    private ChatColor color;
+    
+    /**
+     * Get chat color
+     * @return
+     * @author Kvnamo
+     */
+    public ChatColor getChatColor(){
+        return this.color;
+    }
+    
+    /**
+     * NPC enum constructor
+     * @param color
+     * @author Kvnamo
+     */
+    private NPCEnum(ChatColor color){
+        this.color = color;
+    }
 }
