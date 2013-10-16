@@ -3,6 +3,7 @@ package com.minecade.ac.data;
 import java.util.Date;
 
 import com.avaje.ebean.SqlUpdate;
+import com.minecade.ac.enums.ServerStatusEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.engine.data.MinecadeAccount;
 import com.minecade.engine.data.MinecadePersistence;
@@ -32,9 +33,10 @@ public class ACPersistence extends MinecadePersistence {
 
     /**
      * Creates the or update server in the db.
+     * @param world name
      * @author kvnamo
      */
-    public void createOrUpdateServer() {
+    public void createOrUpdateServer(String worldName) {
         
         ServerModel server = getServerById(this.plugin.getConfig().getInt("server.id"));
         
@@ -46,36 +48,45 @@ public class ACPersistence extends MinecadePersistence {
 
         server.setMaxPlayers(super.plugin.getConfig().getInt("server.max-players"));
         server.setOnlinePlayers(super.plugin.getServer().getOnlinePlayers().length);
-        //server.setState(PMSStatusEnum.WAITING_FOR_PLAYERS);
+        server.setStatus(ServerStatusEnum.WAITING_FOR_PLAYERS);
+        server.setWorldName(worldName);
         
         // store the bean
         super.plugin.getDatabase().save(server);
     }
     
-//    /**
-//     * Update server players.
-//     * @param serverStatus the server status
-//     * @author kvnamo
-//     */
-//    public void updateServerStatus(PMSStatusEnum status) {
-//        StringBuilder dml = new StringBuilder("update server set state=:state ");
-//        
-//        if(status == PMSStatusEnum.RESTARTING) {
-//            dml.append(", online_players=:online_players ");
-//        }        
-//        
-//        dml.append("where id = :id");
-//        
-//        SqlUpdate update = plugin.getDatabase().createSqlUpdate(dml.toString())
-//                .setParameter("state", status.toString())
-//                .setParameter("id", this.plugin.getConfig().getInt("server.id"));
-//        
-//        if(status == PMSStatusEnum.RESTARTING) {
-//            update.setParameter("online_players", 0);
-//        }
-//        
-//        update.execute();        
-//    }
+    /**
+     * Update server status.
+     * @param serverStatus 
+     * @author kvnamo
+     */
+    public void updateServerStatus(ServerStatusEnum status) {
+        
+        StringBuilder query = new StringBuilder("Update servers set state=:state ");
+        
+        if(ServerStatusEnum.OFFLINE.equals(status)) {
+            query.append(", online_players=:online_players ");
+        }
+        else if(ServerStatusEnum.FULL.equals(status)) {
+            query.append(", online_players=:online_players ");
+        }
+        
+        query.append("where id = :id");
+        
+        SqlUpdate update = plugin.getDatabase()
+            .createSqlUpdate(query.toString())
+            .setParameter("status", status.name())
+            .setParameter("id", plugin.getConfig().getInt("server.id"));
+        
+        if(ServerStatusEnum.OFFLINE.equals(status)) {
+            update.setParameter("online_players", 0).setParameter("world_name", "empty");
+        }
+        else if(ServerStatusEnum.FULL.equals(status)){
+            update.setParameter("online_players", plugin.getConfig().getInt("match.required-players"));
+        }
+        
+        update.execute();
+    }
 
     /**
      * Update server players.

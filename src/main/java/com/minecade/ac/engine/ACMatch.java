@@ -25,7 +25,7 @@ import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.enums.MatchStatusEnum;
 import com.minecade.ac.enums.NPCEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
-import com.minecade.ac.task.MatchAnnouncementsTask;
+import com.minecade.ac.task.InvisibilityTask;
 import com.minecade.ac.task.MatchTimerTask;
 import com.minecade.ac.world.ACWorld;
 import com.minecade.engine.utils.EngineUtils;
@@ -47,8 +47,6 @@ public class ACMatch {
     private List<ACPlayer> prisioners = new ArrayList<ACPlayer>();
     
     private MatchTimerTask timerTask;
-    
-    private MatchAnnouncementsTask announcementsTask;
     
     private MatchStatusEnum status = MatchStatusEnum.STOPPED;
     
@@ -122,7 +120,7 @@ public class ACMatch {
                 
                 // Start timer.
                 if(this.timerTask != null) this.timerTask.cancel();
-                this.timerTask = new MatchTimerTask(this, player.getBukkitPlayer(), 30);
+                this.timerTask = new MatchTimerTask(this.plugin, this, player.getBukkitPlayer(), 30);
                 this.timerTask.runTaskTimer(this.plugin, 10, 20l);
                 
                 player.getBukkitPlayer().teleport(this.acWorld.getShipLocation());
@@ -188,7 +186,7 @@ public class ACMatch {
                 if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
                     //Match timer
                     if(this.timerTask != null) this.timerTask.cancel();
-                    this.timerTask = new MatchTimerTask(this, player.getBukkitPlayer(), this.time);
+                    this.timerTask = new MatchTimerTask(this.plugin, this, player.getBukkitPlayer(), this.time);
                     this.timerTask.runTaskTimer(plugin, 10, 20l);
                     break;
                 }
@@ -200,10 +198,6 @@ public class ACMatch {
         
         // Announcements
         this.broadcastMessage(String.format("%sMatch started!", ChatColor.RED));
-        
-        if(this.announcementsTask != null) this.announcementsTask.cancel();
-        this.announcementsTask = new MatchAnnouncementsTask(this.plugin, this);
-        this.announcementsTask.runTaskTimer(this.plugin, 600l, 600l);
     }
     
     /**
@@ -280,7 +274,6 @@ public class ACMatch {
                 ACMatch.this.players.clear();
                 ACMatch.this.prisioners.clear();
                 ACMatch.this.timerTask.cancel();
-                ACMatch.this.announcementsTask.cancel();
                 ACMatch.this.acScoreboard = null;
                 
                 // Set match status
@@ -387,6 +380,9 @@ public class ACMatch {
             ACCharacter.assassin(player);
             player.setLives(lives);
             event.setRespawnLocation(this.acWorld.getShipLocation());
+            
+            // Start invisibility.
+            new InvisibilityTask(player).runTaskTimer(plugin, 10, 200l);
             return;
         }
         

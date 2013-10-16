@@ -24,11 +24,14 @@ public class ACCharacter {
         
         // Set default lives
         player.setLives(3);
+        
+        // Set inventory
         player.setInvisibilityTime(1);
         player.getBukkitPlayer().setLevel(1);
-     
-        // Set potions
+        player.getBukkitPlayer().setHealth(50);
+        player.getBukkitPlayer().setMaxHealth(50);
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getInvisibleEmerald());
+        //player.getBukkitPlayer().getInventory().setArmorContents(ACInventory.getAssassinArmor());
     }
     
     /**

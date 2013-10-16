@@ -95,7 +95,6 @@ public class AssassinsCreedPlugin extends MinecadePlugin {
         
         // Initialize persistence
         this.persistence = new ACPersistence(this);
-        this.persistence.createOrUpdateServer();
         
         // Initialize game.
         this.game = new ACGame(this);
@@ -112,6 +111,9 @@ public class AssassinsCreedPlugin extends MinecadePlugin {
         
         // Initialize Matches.
         this.game.initMatches();
+        
+        // Create or update server status in DB.
+        this.persistence.createOrUpdateServer(this.acWorlds.get(0).getName());
 
         // Register Bungeecord
         super.getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");

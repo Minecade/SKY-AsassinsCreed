@@ -29,6 +29,54 @@ public class ACInventory {
     }
     
     /**
+     * Assassin armor
+     * @return armor
+     * @author kvnamo
+     */
+    public static ItemStack[] getAssassinArmor() {
+        
+        final ItemStack[] armor = new ItemStack[4];
+        
+        final ItemStack helmet = new ItemStack(Material.LEATHER_CHESTPLATE, 1);
+        helmet.addUnsafeEnchantment(Enchantment.DURABILITY, Integer.MAX_VALUE);
+        
+        final LeatherArmorMeta helmetMeta = (LeatherArmorMeta) helmet.getItemMeta();
+        helmetMeta.setColor(Color.WHITE);
+        helmet.setItemMeta(helmetMeta);
+        
+        armor[3] = helmet;
+        
+        final ItemStack chestplate = new ItemStack(Material.LEATHER_CHESTPLATE, 1);
+        chestplate.addUnsafeEnchantment(Enchantment.DURABILITY, Integer.MAX_VALUE);
+        
+        final LeatherArmorMeta chestplateMeta = (LeatherArmorMeta) chestplate.getItemMeta();
+        chestplateMeta.setColor(Color.RED);
+        chestplate.setItemMeta(chestplateMeta);
+        
+        armor[2] = chestplate;
+        
+        final ItemStack leggings = new ItemStack(Material.LEATHER_LEGGINGS, 1);
+        leggings.addUnsafeEnchantment(Enchantment.DURABILITY, Integer.MAX_VALUE);
+        
+        final LeatherArmorMeta leggingsMeta = (LeatherArmorMeta) leggings.getItemMeta();
+        leggingsMeta.setColor(Color.WHITE);
+        leggings.setItemMeta(leggingsMeta);
+        
+        armor[1] = leggings;
+        
+        final ItemStack boots = new ItemStack(Material.LEATHER_BOOTS, 1);
+        boots.addUnsafeEnchantment(Enchantment.DURABILITY, Integer.MAX_VALUE);
+        
+        final LeatherArmorMeta bootsMeta = (LeatherArmorMeta) boots.getItemMeta(); 
+        bootsMeta.setColor(Color.WHITE);
+        boots.setItemMeta(bootsMeta);
+        
+        armor[0] = boots;
+        
+        return armor;
+    }
+    
+    /**
      * Black Ale
      * @return Black Ale
      * @author kvnamo

@@ -36,6 +36,7 @@ import com.minecade.ac.task.InvisibilityTask;
 import com.minecade.ac.task.LobbyTimerTask;
 import com.minecade.engine.enums.PlayerTagEnum;
 import com.minecade.engine.utils.EngineUtils;
+import com.minecade.ac.enums.ServerStatusEnum;
 
 public class ACGame {
     
@@ -198,7 +199,10 @@ public class ACGame {
             this.preInitNextMatch();
         }
         // If the server is full disconnect the player.
-        else EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+        else{ 
+            EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+            this.plugin.getPersistence().updateServerStatus(ServerStatusEnum.FULL);
+        }
     }
     
     /**
@@ -232,13 +236,17 @@ public class ACGame {
                                 ChatColor.YELLOW, match.getACWorld().getName()));
                             
                             // if match players is reached break
-                            if(this.nextMatchPlayers.size() == this.matchRequiredPlayers) break;
+                            if(this.nextMatchPlayers.size() == this.matchRequiredPlayers){
+                                
+                                this.plugin.getPersistence().createOrUpdateServer(match.getACWorld().getName());
+                                
+                                // Update scoreboard
+                                this.acScoreboard.setPlayersToStart(this.getPlayersToStart());
+                                return;
+                            }
                         }
                     }
                 }
-                
-                // if match players is reached break
-                if(this.nextMatchPlayers.size() == this.matchRequiredPlayers) break;
             }
         }
         
@@ -355,6 +363,8 @@ public class ACGame {
             this.broadcastMessage(String.format("%s%s %squit the game.", ChatColor.RED, playerName, ChatColor.GRAY));
         }
         else match.playerQuit(player);
+        
+        this.plugin.getPersistence().updateServerStatus(ServerStatusEnum.WAITING_FOR_PLAYERS);
     }
     
     /**

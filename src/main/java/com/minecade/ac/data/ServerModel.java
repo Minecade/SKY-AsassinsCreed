@@ -2,8 +2,12 @@ package com.minecade.ac.data;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.Id;
 import javax.persistence.Table;
+
+import com.minecade.ac.enums.ServerStatusEnum;
 
 // This class is an entity that should be persisted
 @Entity
@@ -72,5 +76,48 @@ public class ServerModel {
      */
     public void setOnlinePlayers(int onlinePlayers) {
         this.onlinePlayers = onlinePlayers;
+    }
+    
+    @Column(name = "world_name", nullable = false)
+    private String worldName;
+    
+    /**
+     * Get the world name
+     * @return world name
+     * @author Kvnamo
+     */
+    public String getWorldName() {
+        return worldName;
+    }
+
+    /**
+     * Set the world name
+     * @param world name 
+     * @author Kvnamo
+     */
+    public void setWorldName(String worldName) {
+        this.worldName = worldName;
+    }
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private ServerStatusEnum status = ServerStatusEnum.WAITING_FOR_PLAYERS;
+    
+    /**
+     * Get the status
+     * @return status
+     * @author Kvnamo
+     */
+    public ServerStatusEnum getStatus() {
+        return status;
+    }
+
+    /**
+     * Set the status
+     * @param status
+     * @author Kvnamo
+     */
+    public void setStatus(ServerStatusEnum status) {
+        this.status = status;
     }
 }
