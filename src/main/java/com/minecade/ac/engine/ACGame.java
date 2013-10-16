@@ -31,12 +31,12 @@ import org.bukkit.inventory.ItemStack;
 
 import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.enums.MatchStatusEnum;
+import com.minecade.ac.enums.ServerStatusEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.ac.task.InvisibilityTask;
 import com.minecade.ac.task.LobbyTimerTask;
 import com.minecade.engine.enums.PlayerTagEnum;
 import com.minecade.engine.utils.EngineUtils;
-import com.minecade.ac.enums.ServerStatusEnum;
 
 public class ACGame {
     
@@ -356,7 +356,12 @@ public class ACGame {
             
             // If there is no player stop timer and wait.
             if(this.nextMatchPlayers.size() < this.matchRequiredPlayers){
+                // Remove current match
+                for(ACPlayer nextMatchPlayer : this.nextMatchPlayers) nextMatchPlayer.setCurrentMatch(null);
+                
+                // Clear collection
                 this.timerTask.cancel();
+                this.nextMatchPlayers.clear();
             }
             
             this.acScoreboard.setPlayersToStart(this.getPlayersToStart());
