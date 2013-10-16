@@ -31,17 +31,16 @@ match:
 # Central Database
 minecade:
   central-database:
-    username: ${database.username}
+    username: assassinscreed
     driver: com.mysql.jdbc.Driver
-    password: ${database.password}
-    url: ${database.url}
+    password: 2vj7laev8CXb
+    url: jdbc:mysql://172.23.24.95:3306/sky_network
    
 # Server
 server:
     announcements:
     - '&dVisit skydoesminecraft.com/shop to purchase VIP!'
     - '&dJoin the fun at skydoesminecraft.com for up-to-date information on Sky Networks!'
-    - '&dExecute Double Jumps by tapping the space bar twice!'
     - '&dVIP users can join to full servers, visit skydoesminecraft.com/shop to purchase VIP!'
     ban-message: 'You have been banned from sky servers. Appeal at http://skydoesminecraft.com/'
     id: <index>

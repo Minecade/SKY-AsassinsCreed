@@ -52,7 +52,7 @@ public class ACCharacter {
         
         // Set inventory
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getSolidCane());
-        player.getBukkitPlayer().sendMessage(String.format("%sNavy: You are a Bodyguard!", ChatColor.BLUE));
+        player.getBukkitPlayer().sendMessage(String.format("%sYou are a Bodyguard!", ChatColor.BLUE));
     }
     
     /**
@@ -75,7 +75,7 @@ public class ACCharacter {
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getStrongCane());
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getBow());
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getArrow());
-        player.getBukkitPlayer().sendMessage(String.format("%sNavy: You are a Musketeer!", ChatColor.BLUE)); 
+        player.getBukkitPlayer().sendMessage(String.format("%sYou are a Musketeer!", ChatColor.BLUE)); 
     }
     
     /**
@@ -96,7 +96,8 @@ public class ACCharacter {
         
         // Set inventory
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getCane());
-        player.getBukkitPlayer().sendMessage(String.format("%sNavy: You are a Swordsman!", ChatColor.BLUE));        
+        player.getBukkitPlayer().getInventory().addItem(ACInventory.getScimitar());
+        player.getBukkitPlayer().sendMessage(String.format("%sYou are a Swordsman!", ChatColor.BLUE));        
     }
 
     /**

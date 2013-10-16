@@ -62,7 +62,7 @@ public class ACGame {
     private Location lobby;
     
     /**
-     * return lobby location in game.
+     * Get lobby location in game.
      * @return lobby location
      * @author Kvnamo
      */
@@ -241,7 +241,7 @@ public class ACGame {
             }
         }
         
-        // Update score board
+        // Update scoreboard
         this.acScoreboard.setPlayersToStart(this.getPlayersToStart());
     }
 
@@ -257,6 +257,7 @@ public class ACGame {
         if(match != null){
             match.init(this.nextMatchPlayers);
             this.nextMatchPlayers.clear();
+            this.timeLeft(this.matchCountdown);
         }
     }
     
@@ -302,7 +303,8 @@ public class ACGame {
        
         // Check if there is a match available
         if(availablematch != null){
-            availablematch.init(this.nextMatchPlayers);
+            this.acScoreboard.setPlayersToStart(this.getPlayersToStart());
+            availablematch.init(nextMatchPlayers);
             return null;
         }
         
@@ -500,7 +502,7 @@ public class ACGame {
             
             if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) && 
                 CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-                ACShop.shop(player);
+                ACShop.shop(this.plugin, player);
             } 
             else event.setCancelled(true);
         }
@@ -513,6 +515,7 @@ public class ACGame {
      * @author Kvnamo
      */
     public void projectileHit(ProjectileHitEvent event) {
+        
         Projectile projectile = event.getEntity();
 
         // If player throws an Arrow remove it from world
@@ -534,6 +537,7 @@ public class ACGame {
         if(StringUtils.isNotBlank(player.getLastMessage()) && player.getLastMessage().equals(event.getMessage().toLowerCase())){
             event.getPlayer().sendMessage(String.format("%sPlease don't send the same message multiple times!", ChatColor.GRAY));
             event.setCancelled(true);
+            return;
         }
 
         player.setLastMessage(event.getMessage().toLowerCase());
@@ -544,15 +548,9 @@ public class ACGame {
         
         if(match != null && !MatchStatusEnum.STOPPED.equals(match.getStatus())){
             // Send message only to players in current match
-            for (ACPlayer matchPlayer : this.players.values()) {
-                
-                if(match.equals(matchPlayer.getCurrentMatch())){
-                    player.getBukkitPlayer().sendMessage(String.format("%s: %s",
-                        player.getBukkitPlayer().getName(), event.getMessage()));
-                }
-            }
+            match.broadcastMessage(String.format("%s: %s", player.getBukkitPlayer().getName(), event.getMessage()));
         }
-        else this.broadcastMessage(String.format("%s: %s",player.getBukkitPlayer().getName(), event.getMessage()));
+        else this.broadcastMessage(String.format("%s: %s", player.getBukkitPlayer().getName(), event.getMessage()));
         
         event.setCancelled(true);
     }

@@ -119,7 +119,7 @@ public class ACMatch {
                 
                 // Start timer.
                 if(this.timerTask != null) this.timerTask.cancel();
-                this.timerTask = new MatchTimerTask(this, player.getBukkitPlayer(), 10);
+                this.timerTask = new MatchTimerTask(this, player.getBukkitPlayer(), 30);
                 this.timerTask.runTaskTimer(this.plugin, 10, 20l);
                 
                 player.getBukkitPlayer().teleport(this.acWorld.getShipLocation());
@@ -128,11 +128,25 @@ public class ACMatch {
                 
                 // Setup assassin scoreboard lives
                 this.acScoreboard.setAssassinLives(player.getLives());
+                
+                // Messages
+                player.getBukkitPlayer().sendMessage(String.format(
+                    "%s%sMission: eliminate the 5 NPCs found in 5 buildings", ChatColor.BOLD, ChatColor.RED));
+                player.getBukkitPlayer().sendMessage(String.format(    
+                    "%suse /topshop or /lowershop commands to travel to shops buildings.", ChatColor.RED));
+                player.getBukkitPlayer().sendMessage(String.format(    
+                    "%sPressure plates on diamond blocks give the assassin 1 level.", ChatColor.RED));
             }
             // Set navy
             else{
                 EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
                 player.getBukkitPlayer().teleport(this.acWorld.getNavyRoomLocation());
+                
+                 // Messages
+                player.getBukkitPlayer().sendMessage(String.format(
+                    "%s%sMission: defend the 5 NPCs found in 5 buildings", ChatColor.BOLD, ChatColor.BLUE));
+                player.getBukkitPlayer().sendMessage(String.format(    
+                    "%sChoose one Royal Navy character to begin.", ChatColor.BLUE));
             }
             
             // Setup player scoreboard
@@ -243,15 +257,21 @@ public class ACMatch {
 
                 synchronized(ACMatch.this.players){
                     for(ACPlayer player : ACMatch.this.players.values()){
+                        // Setup scoreboard
                         game.getACScoreboard().assignPlayerTeam(player);
+                        
+                        // Teleport to lobby and load defaults
                         player.getBukkitPlayer().setScoreboard(game.getACScoreboard().getScoreboard());
                         player.getBukkitPlayer().teleport(game.getLobbyLocation());
+                        player.loadLobbyInventory();
+                        
+                        // Preinit match if
                         game.preInitNextMatch();
                     }
                 }
                 
                 // Announce match winners in lobby
-                ACMatch.this.plugin.getGame().broadcastMessage(String.format("%sThanks for playing on %s! The %s wins!", 
+                ACMatch.this.plugin.getGame().broadcastMessage(String.format("%sThanks for playing! The %s wins!", 
                     ACMatch.this.npcs == 0 ? ChatColor.RED : ChatColor.BLUE, ACMatch.this.npcs == 0 ? "Assassin" : "Navy"));
                 
                 // Clear all
@@ -297,6 +317,17 @@ public class ACMatch {
         
         player.setLives(player.getLives() - 1);
         
+        // If the assassin died
+        if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+            
+            if(player.getLives() > 0){
+                // Update scoreboard
+                this.acScoreboard.setAssassinLives(player.getLives());
+            }
+            else this.finish();  
+        }
+        
+        // if it was a kill
         if(event.getEntity().getKiller() instanceof Player){
             
             ACPlayer killer = this.players.get(event.getEntity().getKiller().getName());
@@ -349,42 +380,35 @@ public class ACMatch {
     public void playerRespawn(final PlayerRespawnEvent event, final ACPlayer player){
         
         if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-            // Get current assassin lives
-            int lives = player.getLives(); 
-            
-            if(player.getLives() > 0){
-                ACCharacter.assassin(player);
-                player.setLives(lives);
-                event.setRespawnLocation(this.acWorld.getShipLocation());
-                
-                // Update scoreboard
-                this.acScoreboard.setAssassinLives(lives);
-            }
-            else this.finish();  
+            int lives = player.getLives();
+            ACCharacter.assassin(player);
+            player.setLives(lives);
+            event.setRespawnLocation(this.acWorld.getShipLocation());
+            return;
         }
-        else{
-            // Clear player inventory
-            EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
-            
-            // Add to prision
-            player.setCharacter(null);
-            this.prisioners.add(player);
-            event.setRespawnLocation(this.acWorld.getKillBoxLocation());
-            
-            // Update scoreboard
-            this.acScoreboard.setPrisioners(this.prisioners.size());
-            this.acScoreboard.setNavy((this.players.size() - 1) - this.prisioners.size());
-            
-            if(this.prisioners.size() == 1){
-                // Every 20 seconds everyone currently in the room gets teleported to the class select room 
-                this.plugin.getServer().getScheduler().scheduleSyncDelayedTask(this.plugin, new Runnable() {
-                    @Override
-                    public void run() {
-                        ACMatch.this.releasePrisioners();
-                    }
-                }, 400L);
-            }
+        
+        // Clear player inventory
+        EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+        
+        // Add to prision
+        player.setCharacter(null);
+        this.prisioners.add(player);
+        event.setRespawnLocation(this.acWorld.getKillBoxLocation());
+        
+        // Update scoreboard
+        this.acScoreboard.setPrisioners(this.prisioners.size());
+        this.acScoreboard.setNavy((this.players.size() - 1) - this.prisioners.size());
+        
+        if(this.prisioners.size() == 1){
+            // Every 20 seconds everyone currently in the room gets teleported to the class select room 
+            this.plugin.getServer().getScheduler().scheduleSyncDelayedTask(this.plugin, new Runnable() {
+                @Override
+                public void run() {
+                    ACMatch.this.releasePrisioners();
+                }
+            }, 400L);
         }
+    
     }
     
     /**
@@ -409,13 +433,13 @@ public class ACMatch {
         // The assassin can get damaged by anyone
         if(CharacterEnum.ASSASSIN.equals(player.getCharacter())) return;
         
-        // Get enemy
-        final ACPlayer enemy = this.players.get(((Player)((EntityDamageByEntityEvent) event).getDamager()).getName());
-        
-        plugin.getServer().getLogger().severe("enemy:" + enemy.getCharacter());
-        
-        // The assassin can damaged anyone
-        if(CharacterEnum.ASSASSIN.equals(enemy.getCharacter())) return;
+        if(event instanceof EntityDamageByEntityEvent && ((EntityDamageByEntityEvent) event).getDamager() instanceof Player){
+            // Get enemy
+            final ACPlayer enemy = this.players.get(((Player)((EntityDamageByEntityEvent) event).getDamager()).getName());
+            
+            // The assassin can damaged anyone
+            if(CharacterEnum.ASSASSIN.equals(enemy.getCharacter())) return;
+        }
         
         event.setCancelled(true);
     }
@@ -517,6 +541,19 @@ public class ACMatch {
     }
     
     /**
+     * Broadcast lobby players message
+     * @param format
+     * @author Kvnamo
+     */
+    public void broadcastMessage(String message) {
+        
+        // Send message only to players in lobby
+        for (ACPlayer player : this.players.values()) {
+            player.getBukkitPlayer().sendMessage(message);
+        }
+    }
+    
+    /**
      * Add butter coins in sky central db
      * @param playerName
      * @param butterCoins
@@ -529,18 +566,5 @@ public class ACMatch {
                 ACMatch.this.plugin.getPersistence().addButterCoins(playerName, butterCoins);
             }
         });
-    }
-    
-    /**
-     * Broadcast lobby players message
-     * @param format
-     * @author Kvnamo
-     */
-    private void broadcastMessage(String message) {
-        
-        // Send message only to players in lobby
-        for (ACPlayer player : this.players.values()) {
-            player.getBukkitPlayer().sendMessage(message);
-        }
     }
 }

@@ -88,7 +88,7 @@ public class ACInventory {
         bow.addUnsafeEnchantment(Enchantment.DURABILITY, Enchantment.DURABILITY.getMaxLevel());
         
         final ItemMeta bowMeta = bow.getItemMeta();
-        bowMeta.setDisplayName(ChatColor.WHITE + "Bow");
+        bowMeta.setDisplayName(ChatColor.WHITE + "Musket");
         bowMeta.setLore(Arrays.asList(
                 ChatColor.GRAY + "Unbreaking X.",
                 ChatColor.DARK_GRAY + "An excellent long range weapon.",
@@ -343,7 +343,7 @@ public class ACInventory {
         String timePlayed = new DecimalFormat("0.000").format((double)player.getPlayerModel().getTimePlayed() / (double)86400);
         
         statsMeta.setPages(
-                String.format("%s%s%s STATS! \n\n\n%s %sWins: %s%s\n %sLooses: %s%s\n %sLast seen: %s%s\n Time played: %s%s days.",
+                String.format("%s%s%s STATS! \n\n\n%s %sWins: %s%s\n %sLooses: %s%s\n %sLast seen: %s%s\n %sTime played: %s days.",
                 ChatColor.BOLD, ChatColor.RED, player.getBukkitPlayer().getName().toUpperCase(), ChatColor.DARK_GRAY,
                 ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getWins(),
                 ChatColor.BOLD, ChatColor.DARK_GRAY, player.getPlayerModel().getLosses(),
