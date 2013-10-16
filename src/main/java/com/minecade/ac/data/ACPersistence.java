@@ -62,7 +62,7 @@ public class ACPersistence extends MinecadePersistence {
      */
     public void updateServerStatus(ServerStatusEnum status) {
         
-        StringBuilder query = new StringBuilder("Update servers set state=:state ");
+        StringBuilder query = new StringBuilder("Update servers set status=:status ");
         
         if(ServerStatusEnum.OFFLINE.equals(status)) {
             query.append(", online_players=:online_players ");
