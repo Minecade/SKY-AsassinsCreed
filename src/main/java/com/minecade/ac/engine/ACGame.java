@@ -558,15 +558,16 @@ public class ACGame {
 
         player.setLastMessage(event.getMessage().toLowerCase());
         PlayerTagEnum playerTag = PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount());
-        event.setFormat(playerTag.getPrefix() + ChatColor.WHITE + "%s" + ChatColor.GRAY + ": %s");
         
         final ACMatch match = player.getCurrentMatch();
         
         if(match != null && !MatchStatusEnum.STOPPED.equals(match.getStatus())){
             // Send message only to players in current match
-            match.broadcastMessage(String.format("%s: %s", player.getBukkitPlayer().getName(), event.getMessage()));
+            match.broadcastMessage(String.format("%s%s%s%s: %s", playerTag.getPrefix(), ChatColor.WHITE, 
+                player.getBukkitPlayer().getName(), ChatColor.GRAY, event.getMessage()));
         }
-        else this.broadcastMessage(String.format("%s: %s", player.getBukkitPlayer().getName(), event.getMessage()));
+        else this.broadcastMessage(String.format("%s%s%s%s: %s", playerTag.getPrefix(), ChatColor.WHITE, 
+            player.getBukkitPlayer().getName(), ChatColor.GRAY, event.getMessage()));
         
         event.setCancelled(true);
     }

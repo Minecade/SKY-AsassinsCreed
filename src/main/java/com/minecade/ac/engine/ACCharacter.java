@@ -28,10 +28,10 @@ public class ACCharacter {
         // Set inventory
         player.setInvisibilityTime(1);
         player.getBukkitPlayer().setLevel(1);
-        player.getBukkitPlayer().setHealth(50);
-        player.getBukkitPlayer().setMaxHealth(50);
+        player.getBukkitPlayer().setHealth(30);
+        player.getBukkitPlayer().setMaxHealth(30);
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getInvisibleEmerald());
-        //player.getBukkitPlayer().getInventory().setArmorContents(ACInventory.getAssassinArmor());
+        player.getBukkitPlayer().getInventory().setArmorContents(ACInventory.getAssassinArmor());
     }
     
     /**
