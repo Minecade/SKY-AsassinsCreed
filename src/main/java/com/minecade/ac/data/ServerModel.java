@@ -100,7 +100,7 @@ public class ServerModel {
     }
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "state", nullable = false)
     private ServerStatusEnum status = ServerStatusEnum.WAITING_FOR_PLAYERS;
     
     /**

@@ -62,7 +62,7 @@ public class ACPersistence extends MinecadePersistence {
      */
     public void updateServerStatus(ServerStatusEnum status) {
         
-        StringBuilder query = new StringBuilder("Update servers set status=:status ");
+        StringBuilder query = new StringBuilder("Update servers set state=:state ");
         
         if(ServerStatusEnum.OFFLINE.equals(status)) {
             query.append(", online_players=:online_players ");
@@ -75,7 +75,7 @@ public class ACPersistence extends MinecadePersistence {
         
         SqlUpdate update = plugin.getDatabase()
             .createSqlUpdate(query.toString())
-            .setParameter("status", status.name())
+            .setParameter("state", status.name())
             .setParameter("id", plugin.getConfig().getInt("server.id"));
         
         if(ServerStatusEnum.OFFLINE.equals(status)) {

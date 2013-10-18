@@ -215,7 +215,7 @@ public class ACMatch {
                     // Set a win if the assassin killed every target
                     if(this.npcs == 0){
                         // Update Butter Coins in central DB
-                        addButterCoins(player.getBukkitPlayer().getName(), 5);
+                        addButterCoins(player, 5);
                         player.getPlayerModel().setWins(player.getPlayerModel().getWins() + 1);
                     }
                     else player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
@@ -224,7 +224,7 @@ public class ACMatch {
                     // Set a win for the navy if at least one target (npc) is alive
                     if(this.npcs > 0){
                         // Update Butter Coins in central DB
-                        addButterCoins(player.getBukkitPlayer().getName(), 5);
+                        addButterCoins(player, 5);
                         player.getPlayerModel().setWins(player.getPlayerModel().getWins() + 1);
                     }
                     else player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
@@ -338,7 +338,7 @@ public class ACMatch {
             }
             
             // Update butter coins
-            addButterCoins(killer.getBukkitPlayer().getName(), 1);
+            addButterCoins(killer, 1);
         }
     }
     
@@ -557,12 +557,15 @@ public class ACMatch {
      * @param playerName
      * @param butterCoins
      */
-    private void addButterCoins(final String playerName, final int butterCoins){
+    private void addButterCoins(final ACPlayer player, int butterCoins){
+        
+        final int vipButterCoins = player.getMinecadeAccount().isVip() ? butterCoins * 2 : butterCoins;
+        
         // Update Butter Coins in central DB
         Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
             @Override
             public void run() {
-                ACMatch.this.plugin.getPersistence().addButterCoins(playerName, butterCoins);
+                ACMatch.this.plugin.getPersistence().addButterCoins(player.getBukkitPlayer().getName(), vipButterCoins);
             }
         });
     }
