@@ -1,5 +1,6 @@
 package com.minecade.ac.engine;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import com.minecade.ac.data.PlayerModel;
@@ -7,7 +8,6 @@ import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.engine.data.MinecadeAccount;
 import com.minecade.engine.utils.EngineUtils;
-import com.minecade.ac.engine.ACInventory;
 
 public class ACPlayer{
 
@@ -185,28 +185,22 @@ public class ACPlayer{
     public void setLastMessage(String lastMessage) {
         this.lastMessage = lastMessage;
     }
-
-    /**
-     * PMPlayer constructor
-     * @param plugin
-     * @param bukkitPlayer
-     * @author kunamo
-     */
-    public ACPlayer(final AssassinsCreedPlugin plugin, final Player bukkitPlayer){
-        
-        this.bukkitPlayer = bukkitPlayer;
-        this.playerModel = plugin.getPersistence().getPlayer(bukkitPlayer.getName());
-        this.minecadeAccount = plugin.getPersistence().getMinecadeAccount(bukkitPlayer.getName());
-    }
-
+    
     /**
      * Load player inventory
      * @author Kvnamo
      */
-    public void loadLobbyInventory() {
-        EngineUtils.clearBukkitPlayer(this.bukkitPlayer);
-        this.bukkitPlayer.getInventory().addItem(ACInventory.getInstructionsBook());
-        this.bukkitPlayer.getInventory().addItem(ACInventory.getStatsBook(this));
-        this.bukkitPlayer.getInventory().addItem(ACInventory.getLeaveCompass()); 
+    public void loadLobbyInventory(AssassinsCreedPlugin plugin) {
+        
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            
+            @Override
+            public void run() {
+        EngineUtils.clearBukkitPlayer(ACPlayer.this.bukkitPlayer);
+        ACPlayer.this.bukkitPlayer.getInventory().addItem(ACInventory.getInstructionsBook());
+        ACPlayer.this.bukkitPlayer.getInventory().addItem(ACInventory.getStatsBook(ACPlayer.this));
+        ACPlayer.this.bukkitPlayer.getInventory().addItem(ACInventory.getLeaveCompass());
+            }
+        });
     }
 }

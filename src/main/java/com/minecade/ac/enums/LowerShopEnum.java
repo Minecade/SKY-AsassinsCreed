@@ -15,7 +15,7 @@ public enum LowerShopEnum implements ACShopInventory{
     
     DECOOY(3, ACInventory.getDecoy(), -166, 107, 21),
     
-    GRENADE(8, ACInventory.getGranade(), -170, 107, 21),
+    FIREBALL(8, ACInventory.getFireball(), -170, 107, 21),
     
     HIDDENBLADE(1, ACInventory.getHiddenBlade(), -172, 107, 15), 
     

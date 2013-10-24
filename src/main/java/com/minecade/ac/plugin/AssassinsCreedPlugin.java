@@ -3,6 +3,7 @@ package com.minecade.ac.plugin;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
@@ -119,7 +120,7 @@ public class AssassinsCreedPlugin extends MinecadePlugin {
         super.getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
 
         // Send an announcement every 5 minutes
-        this.getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
+        Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
             @Override
             public void run() {
                 final String announcement = AssassinsCreedPlugin.this.getRandomAnnouncement();
@@ -130,7 +131,7 @@ public class AssassinsCreedPlugin extends MinecadePlugin {
         }, 6000L, 6000L);
 
         // Update player count every 10 seconds if it has changed
-        this.getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, new Runnable() {
             @Override
             public void run() {
                 AssassinsCreedPlugin.this.persistence.updateServerPlayers();

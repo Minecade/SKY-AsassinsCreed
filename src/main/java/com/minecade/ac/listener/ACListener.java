@@ -9,7 +9,6 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.LeavesDecayEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.entity.EntityTameEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
@@ -132,6 +131,16 @@ public class ACListener implements Listener{
    public void onProjectileHitEvent(ProjectileHitEvent event){
        this.plugin.getGame().projectileHit(event);
    }
+   
+//   /**
+//    * Call by PotionSplashEvent handler when potion hits something.
+//    * @param event
+//    * @author kvnamo
+//    */
+//   @EventHandler
+//   public void onPotionSplashEvent(PotionSplashEvent event){
+//       this.plugin.getGame().potionSplash(event);
+//   }
    
    /** 
     * Call by AsyncPlayerChatEvent on player chat

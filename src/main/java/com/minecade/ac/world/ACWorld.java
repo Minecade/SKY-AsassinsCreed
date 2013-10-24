@@ -11,14 +11,14 @@ import com.minecade.engine.MinecadeWorld;
 
 public abstract class ACWorld extends MinecadeWorld{
     
-    private Location shipLocation;
+    private Location assassinLocation;
     
     /**
      * Get assassin spawn location
      * @author Kvnamo
      */
-    public Location getShipLocation(){
-        return this.shipLocation;
+    public Location getAssassinLocation(){
+        return this.assassinLocation;
     }
     
     private Location navyLocation;
@@ -69,6 +69,16 @@ public abstract class ACWorld extends MinecadeWorld{
         return this.swordsmanLocation;
     }
     
+    private Location topShopLocation;
+    
+    /**
+     * Get assassin spawn location
+     * @author Kvnamo
+     */
+    public Location getTopShopLocation(){
+        return this.topShopLocation;
+    }
+    
     private Location lowerShopLocation;
     
     /**
@@ -91,8 +101,6 @@ public abstract class ACWorld extends MinecadeWorld{
     
     private Location bodyguardLocation;
     
- 
-    
     private Map<NPCEnum, Location> npcLocation;
     
     /**
@@ -113,7 +121,7 @@ public abstract class ACWorld extends MinecadeWorld{
             String.format("assassins%s", world), plugin);
         
         // Set assassin spawn locations.
-        this.shipLocation = new Location(super.world, -169, 114, 34);
+        this.assassinLocation = new Location(super.world, -170, 171, 28);
         
         // Set navy spawn locations.
         this.navyLocation = new Location(super.world, -190, 116, -44);
@@ -123,6 +131,7 @@ public abstract class ACWorld extends MinecadeWorld{
         this.swordsmanLocation = new Location(super.world, -149, 96, -53);
         
         // Set top shop location
+        this.topShopLocation = new Location(super.world, -169, 114, 34);
         this.lowerShopLocation = new Location(super.world, -167, 107, 18);
         
         // Set killBox spawn locations.

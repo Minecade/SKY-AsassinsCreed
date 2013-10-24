@@ -72,8 +72,8 @@ public class ACInventory {
         final PotionMeta blackAleMeta = (PotionMeta) blackAle.getItemMeta();
         blackAleMeta.setDisplayName(ChatColor.WHITE + "Black Ale");
         blackAleMeta.addEnchant(Enchantment.DAMAGE_ALL, 260, true);
-        blackAleMeta.addCustomEffect(PotionEffectType.DAMAGE_RESISTANCE.createEffect(1800, 2), true);
-        blackAleMeta.addCustomEffect(PotionEffectType.CONFUSION.createEffect(100, 1), true);
+        blackAleMeta.addCustomEffect(PotionEffectType.DAMAGE_RESISTANCE.createEffect(90 * 20, 2), true);
+        blackAleMeta.addCustomEffect(PotionEffectType.CONFUSION.createEffect(5 * 20, 1), true);
         blackAleMeta.setLore(Arrays.asList(
                 ChatColor.GRAY + "Strength II (1:30).",
                 ChatColor.GRAY + "Nausea (0:10).",
@@ -84,6 +84,27 @@ public class ACInventory {
 
         return blackAle;
     }
+    
+//    /** 
+//     * Get Blindness Potion
+//     * @return Blindness potion
+//     * @author Kvnamo
+//     */
+//    public static ItemStack getBlindnessPotion(){
+//        
+//        ItemStack blindnessPotion = new Potion(PotionType.getByEffect(PotionEffectType.BLINDNESS)).splash().toItemStack(1);
+//        blindnessPotion.addUnsafeEnchantment(Enchantment.DAMAGE_ALL, 2);
+//        
+//        final PotionMeta blindnessPotionMeta = (PotionMeta) blindnessPotion.getItemMeta();
+//        blindnessPotionMeta.setDisplayName(ChatColor.WHITE + "Blindness potion");
+//        blindnessPotionMeta.setLore(Arrays.asList(
+//            ChatColor.GRAY + "Instant Blindness.",
+//            ChatColor.DARK_GRAY + "Effective against the Navy, innefective against village folk."));
+//        
+//        blindnessPotion.setItemMeta(blindnessPotionMeta);
+//
+//        return blindnessPotion;
+//    }
     
     /**
      * Get Boarding Axe
@@ -194,23 +215,19 @@ public class ACInventory {
     }
     
     /**
-     * Granade
-     * @return Granade
+     * Fireball
+     * @return Fireball
      * @author kvnamo
      */
-    public static ItemStack getGranade(){
-        
-        ItemStack granade = new Potion(PotionType.INSTANT_DAMAGE).splash().toItemStack(1);
-        
-        final PotionMeta granadeMeta = (PotionMeta) granade.getItemMeta();
-        granadeMeta.setDisplayName(ChatColor.WHITE + "Granade");
-        granadeMeta.addEnchant(Enchantment.DAMAGE_ALL, 2, true);
-        granadeMeta.setLore(Arrays.asList(
-                ChatColor.GRAY + "Instant Damage II.",
-                ChatColor.DARK_GRAY + "Effective against the Navy, innefective against village folk."));
-        
-        granade.setItemMeta(granadeMeta);
+    public static ItemStack getFireball(){
 
+        final ItemStack granade = new ItemStack(Material.FIREBALL, 10);
+        
+        final ItemMeta granadeMeta = granade.getItemMeta();
+        granadeMeta.setDisplayName(ChatColor.GREEN + "Fireball");
+        granadeMeta.setLore(Arrays.asList(ChatColor.GRAY + "Set player on fire on Impact"));
+        granade.setItemMeta(granadeMeta);
+        
         return granade;
     }
     
@@ -329,7 +346,7 @@ public class ACInventory {
         
         final PotionMeta smokeBombMeta = (PotionMeta) smokeBomb.getItemMeta();
         smokeBombMeta.setDisplayName(ChatColor.DARK_RED + "Smoke Bomb");
-        smokeBombMeta.addCustomEffect(PotionEffectType.BLINDNESS.createEffect(160, Integer.MAX_VALUE), true);
+        smokeBombMeta.addCustomEffect(PotionEffectType.BLINDNESS.createEffect(4 * 20, 10), true);
         smokeBombMeta.setLore(Arrays.asList(
                 ChatColor.GRAY + "Blindness (0:08).",
                 ChatColor.DARK_GRAY + "Restricts the view of the unfortunate targets."));

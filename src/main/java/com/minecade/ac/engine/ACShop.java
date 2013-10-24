@@ -1,5 +1,6 @@
 package com.minecade.ac.engine;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -52,8 +53,8 @@ public class ACShop {
         else if(ACShop.getLocation(world, LowerShopEnum.DECOOY.getX(), LowerShopEnum.DECOOY.getY(), LowerShopEnum.DECOOY.getZ()).equals(location)){
             ACShop.buyLowerShop(plugin, bukkitPlayer, LowerShopEnum.DECOOY);
         }
-        else if(ACShop.getLocation(world, LowerShopEnum.GRENADE.getX(), LowerShopEnum.GRENADE.getY(), LowerShopEnum.GRENADE.getZ()).equals(location)){
-            ACShop.buyLowerShop(plugin, bukkitPlayer, LowerShopEnum.GRENADE);
+        else if(ACShop.getLocation(world, LowerShopEnum.FIREBALL.getX(), LowerShopEnum.FIREBALL.getY(), LowerShopEnum.FIREBALL.getZ()).equals(location)){
+            ACShop.buyLowerShop(plugin, bukkitPlayer, LowerShopEnum.FIREBALL);
         }
         else if(ACShop.getLocation(world, LowerShopEnum.HIDDENBLADE.getX(), LowerShopEnum.HIDDENBLADE.getY(), LowerShopEnum.HIDDENBLADE.getZ()).equals(location)){
             ACShop.buyLowerShop(plugin, bukkitPlayer, LowerShopEnum.HIDDENBLADE);
@@ -80,13 +81,19 @@ public class ACShop {
         if (bukkitPlayer.getLevel() >= skill.getCost()){
             
             // Run in next tick 
-            plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
+            Bukkit.getScheduler().runTask(plugin, new Runnable() {
                 @Override
                 public void run() {
                     bukkitPlayer.setLevel(bukkitPlayer.getLevel() - skill.getCost());
                     
                     // If the player bought invisibility
-                    if(TopShopEnum.INVISIBILITY.equals(skill)) player.setInvisibilityTime(2);
+                    if(TopShopEnum.HEALTH.equals(skill)){
+                        bukkitPlayer.addPotionEffect(skill.getPotionEffect());
+                        bukkitPlayer.setHealth(bukkitPlayer.getMaxHealth());
+                    }
+                    else if(TopShopEnum.INVISIBILITY.equals(skill)){
+                        player.setInvisibilityTime(2);
+                    }
                     else bukkitPlayer.addPotionEffect(skill.getPotionEffect());
                     
                     bukkitPlayer.sendMessage(String.format("%sYou have bought %s skill.", ChatColor.YELLOW, skill.name()));
@@ -111,7 +118,7 @@ public class ACShop {
         if (bukkitPlayer.getLevel() >= item.getCost()){
             
             // Run in next tick 
-            plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
+            Bukkit.getScheduler().runTask(plugin, new Runnable() {
                 @Override
                 public void run() {
                     bukkitPlayer.setLevel(bukkitPlayer.getLevel() - item.getCost());
