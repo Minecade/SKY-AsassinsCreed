@@ -231,9 +231,6 @@ public class ACMatch {
                         player.getBukkitPlayer().teleport(game.getLobbyLocation());
                         player.loadLobbyInventory(ACMatch.this.plugin);
                     }
-                    
-                    // Preinit match if
-                    game.preInitNextMatch();
                 }
                 
                 // Announce match winners in lobby
@@ -244,13 +241,17 @@ public class ACMatch {
                 ACMatch.this.players.clear();
                 ACMatch.this.prisioners.clear();
                 ACMatch.this.timerTask.cancel();
-                ACMatch.this.acScoreboard = null;
+                ACMatch.this.acScoreboard.init();
                 
                 // Set match status
                 ACMatch.this.status = MatchStatusEnum.STOPPED;
                 
                 // Unload world
                 Bukkit.getServer().unloadWorld(ACMatch.this.world.getWorld(), false);
+                ACMatch.this.world = null;
+                
+                // Preinit match if
+                game.preInitNextMatch();
             }
         }, 150L);
         

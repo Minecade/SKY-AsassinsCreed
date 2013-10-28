@@ -181,71 +181,43 @@ public class ACGame {
         final Player bukkitPlayer = event.getPlayer();
 
         // Check if the player is banned
-        Bukkit.getScheduler().runTaskAsynchronously(this.plugin, new Runnable() {
+        if(ACGame.this.plugin.getPersistence().isPlayerBanned(bukkitPlayer.getName())){
+            bukkitPlayer.kickPlayer(ACGame.this.plugin.getConfig().getString("server.ban-message"));
+            return;
+        }
+                
+        final PlayerModel playerModel = ACGame.this.plugin.getPersistence().getPlayer(bukkitPlayer.getName());
+        final MinecadeAccount minecadeAccount = ACGame.this.plugin.getPersistence().getMinecadeAccount(bukkitPlayer.getName());
+                
+        // Create player
+        final ACPlayer player = new ACPlayer();
+        player.setBukkitPlayer(bukkitPlayer);
+        player.setPlayerModel(playerModel);
+        player.setMinecadeAccount(minecadeAccount);
+        
+        // Check if the server needs more players or if the player is VIP
+        if(ACGame.this.players.size() <= ACGame.this.maxPlayers || (player.getMinecadeAccount().isVip() && 
+            ACGame.this.players.size() <= ACGame.this.vipPlayers)){
             
-            @Override
-            public void run() {
-                 
-                if(ACGame.this.plugin.getPersistence().isPlayerBanned(bukkitPlayer.getName())){
-                
-                    Bukkit.getScheduler().runTask(ACGame.this.plugin, new Runnable() { 
-                        
-                        @Override
-                        public void run() {
-                            bukkitPlayer.kickPlayer(ACGame.this.plugin.getConfig().getString("server.ban-message"));
-                        }
-                    });
-                    
-                    return;
-                }
-                
-                final PlayerModel playerModel = ACGame.this.plugin.getPersistence().getPlayer(bukkitPlayer.getName());
-                final MinecadeAccount minecadeAccount = ACGame.this.plugin.getPersistence().getMinecadeAccount(bukkitPlayer.getName());
-                
-                Bukkit.getScheduler().runTask(ACGame.this.plugin, new Runnable() { 
-                    
-                    @Override
-                    public void run() {
-                        
-                        // Create player
-                        final ACPlayer player = new ACPlayer();
-                        player.setBukkitPlayer(bukkitPlayer);
-                        player.setPlayerModel(playerModel);
-                        player.setMinecadeAccount(minecadeAccount);
-                        
-                        // Check if the server needs more players or if the player is VIP
-                        if(ACGame.this.players.size() <= ACGame.this.maxPlayers || (player.getMinecadeAccount().isVip() && 
-                            ACGame.this.players.size() <= ACGame.this.vipPlayers)){
-                            
-                            // Load lobby inventory
-                            player.loadLobbyInventory(ACGame.this.plugin);
-                            
-                            // Assign player score board
-                            ACGame.this.acScoreboard.assignPlayerTeam(player);
-                            bukkitPlayer.setScoreboard(ACGame.this.acScoreboard.getScoreboard());
-                            
-                            // Add player to players collection
-                            ACGame. this.players.put(bukkitPlayer.getName(), player);
-                            bukkitPlayer.teleport(ACGame.this.lobby); 
+            // Load lobby inventory
+            player.loadLobbyInventory(ACGame.this.plugin);
+            
+            // Assign player score board
+            ACGame.this.acScoreboard.assignPlayerTeam(player);
+            bukkitPlayer.setScoreboard(ACGame.this.acScoreboard.getScoreboard());
+            
+            // Add player to players collection
+            ACGame. this.players.put(bukkitPlayer.getName(), player);
+            bukkitPlayer.teleport(ACGame.this.lobby); 
 
-                            // Start a match if there are enough players
-                            ACGame.this.preInitNextMatch();
-                        }
-                        // If the server is full disconnect the player.
-                        else{ 
-                            EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
-                            
-                            Bukkit.getScheduler().runTaskAsynchronously(ACGame.this.plugin, new Runnable() {
-                                @Override
-                                public void run() {
-                                    ACGame.this.plugin.getPersistence().updateServerStatus(ServerStatusEnum.FULL);
-                                }
-                            });
-                        }
-                    }
-                });
-            }
-        });
+            // Start a match if there are enough players
+            ACGame.this.preInitNextMatch();
+        }
+        // If the server is full disconnect the player.
+        else{ 
+            EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+            ACGame.this.plugin.getPersistence().updateServerStatus(ServerStatusEnum.FULL);
+        }
     }
     
     /**
@@ -622,30 +594,6 @@ public class ACGame {
         }
     }
     
-//    /**
-//     * On potion splash
-//     * @param event
-//     * @author Kvnamo
-//     */
-//    public void potionSplash(PotionSplashEvent event) {
-//         
-//        if(ACInventory.getBlindnessPotion().getType().equals(event.getPotion().getType())){
-//            for(LivingEntity entity : event.getAffectedEntities()){
-//                
-//                if(entity instanceof Player){
-//                    
-//                    final ACPlayer player = this.players.get(((Player) entity).getName());
-//                    final ACMatch match = player.getCurrentMatch();
-//                    
-//                    // If the player is in the lobby do nothing
-//                    if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
-//                        entity.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 5 * 20, 2));
-//                    }
-//                }
-//            }
-//        }
-//    }
-    
     /**
      * Chat message formatting
      * @param event
@@ -691,7 +639,9 @@ public class ACGame {
         if(this.matchCountdown > 6) return;
         
         for (ACPlayer player : this.players.values()) {
-            player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);
+            if(player.getCurrentMatch() == null || MatchStatusEnum.STOPPED.equals(player.getCurrentMatch().getStatus())){
+                player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);
+            }
         } 
     }
     
