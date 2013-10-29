@@ -84,6 +84,26 @@ public class ACMatch {
         this.world = world;
     }
     
+    private MinecadeWorld matchWorld;
+
+    /**
+     * Get minecade match world
+     * @param world
+     * @author Kvnamo
+     */
+    public MinecadeWorld getMinecadeMatchWorld(){
+        return this.matchWorld;
+    }
+    
+    /**
+     * Set minecade match world
+     * @param world
+     * @author Kvnamo
+     */
+    public void setMinecadeMatchWorld(MinecadeWorld matchWorld){
+        this.matchWorld = matchWorld;
+    }
+    
     /**
      * ACMatch constructor
      * @param plugin
@@ -128,7 +148,7 @@ public class ACMatch {
                 this.timerTask = new MatchTimerTask(this.plugin, this, player.getBukkitPlayer(), 30);
                 this.timerTask.runTaskTimer(this.plugin, 10, 20l);
                 
-                player.getBukkitPlayer().teleport(((ACWorld)this.world).getAssassinLocation());
+                player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getAssassinLocation());
                 player.setCharacter(CharacterEnum.ASSASSIN);
                 ACCharacter.assassin(this.plugin, player);
                 
@@ -143,7 +163,7 @@ public class ACMatch {
             // Set navy
             else{
                 EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
-                player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyRoomLocation());
+                player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getNavyRoomLocation());
                 
                  // Message
                 player.getBukkitPlayer().sendMessage(String.format(    
@@ -162,7 +182,7 @@ public class ACMatch {
 
         for (int i = 0; i < this.npcs; i++) {
             npc = NPCEnum.values()[i];
-            location = ((ACWorld)this.world).getNPCLocation(npc);
+            location = ((ACWorld)this.matchWorld).getNPCLocation(npc);
             
             // Spawn npc
             ACCharacter.zombie(this.plugin, (Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE), npc);
@@ -245,10 +265,6 @@ public class ACMatch {
                 
                 // Set match status
                 ACMatch.this.status = MatchStatusEnum.STOPPED;
-                
-                // Unload world
-                Bukkit.getServer().unloadWorld(ACMatch.this.world.getWorld(), false);
-                ACMatch.this.world = null;
                 
                 // Preinit match if
                 game.preInitNextMatch();
@@ -397,7 +413,7 @@ public class ACMatch {
             int lives = player.getLives();
             ACCharacter.assassin(this.plugin, player);
             player.setLives(lives);
-            event.setRespawnLocation(((ACWorld)this.world).getAssassinLocation());
+            event.setRespawnLocation(((ACWorld)this.matchWorld).getAssassinLocation());
             
             // Start invisibility.
             new InvisibilityTask(player).runTaskTimer(plugin, 10, 200l);
@@ -410,7 +426,7 @@ public class ACMatch {
         // Add to prision
         player.setCharacter(null);
         this.prisioners.add(player);
-        event.setRespawnLocation(((ACWorld)this.world).getKillBoxLocation());
+        event.setRespawnLocation(((ACWorld)this.matchWorld).getKillBoxLocation());
         
         // Update scoreboard
         this.acScoreboard.setPrisioners(this.prisioners.size());
@@ -475,7 +491,7 @@ public class ACMatch {
         
         synchronized (this.prisioners) {    
             for(ACPlayer player : this.prisioners){
-                player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyRoomLocation());
+                player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getNavyRoomLocation());
             }
             
             this.prisioners.clear();
@@ -514,18 +530,18 @@ public class ACMatch {
 
         Location location = player.getBukkitPlayer().getLocation().getBlock().getLocation();
         
-        if(((ACWorld)this.world).getBodyguardLocation().equals(location)){
-            player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyLocation());
+        if(((ACWorld)this.matchWorld).getBodyguardLocation().equals(location)){
+            player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getNavyLocation());
             player.setCharacter(CharacterEnum.BODYGUARD);
             ACCharacter.bodyguard(this.plugin, player);
         }
-        else if(((ACWorld)this.world).getMusketeerLocation().equals(location)){
-            player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyLocation());
+        else if(((ACWorld)this.matchWorld).getMusketeerLocation().equals(location)){
+            player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getNavyLocation());
             player.setCharacter(CharacterEnum.MUSKETEER);
             ACCharacter.musketeer(this.plugin, player);
         }
-        else if(((ACWorld)this.world).getSwordsmanLocation().equals(location)){
-            player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyLocation());
+        else if(((ACWorld)this.matchWorld).getSwordsmanLocation().equals(location)){
+            player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getNavyLocation());
             player.setCharacter(CharacterEnum.SWORDSMAN);
             ACCharacter.swordsman(this.plugin, player);
         }

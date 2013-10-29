@@ -250,16 +250,6 @@ public class ACGame {
                             // if match players is reached break
                             if(this.nextMatchPlayers.size() == this.matchRequiredPlayers){
                                 
-                                // Create the world
-                                try {
-                                    match.setMinecadeWorld((MinecadeWorld) match.getMinecadeWorld().getClass()
-                                        .getConstructor(MinecadePlugin.class).newInstance(this.plugin));
-                                } 
-                                catch (InstantiationException | IllegalAccessException | IllegalArgumentException |
-                                    InvocationTargetException | NoSuchMethodException | SecurityException exception) {
-                                    this.plugin.getServer().getLogger().severe(String.format("Error creating world: %s", exception.toString()));
-                                }
-                                
                                 // Start game timer.
                                 if(this.timerTask != null) this.timerTask.cancel();
                                 this.timerTask = new LobbyTimerTask(this, this.matchCountdown);
