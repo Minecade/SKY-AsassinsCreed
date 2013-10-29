@@ -7,6 +7,7 @@ import org.bukkit.entity.Zombie;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.util.Vector;
 
 import com.minecade.ac.enums.NPCEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
@@ -149,6 +150,7 @@ public class ACCharacter {
             public void run() {
         
                 // Set characteristics
+                zombie.setVelocity(new Vector());
                 zombie.setTarget(null);
                 zombie.setMaxHealth(20);
                 zombie.setVillager(false);
