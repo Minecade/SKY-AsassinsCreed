@@ -11,7 +11,9 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Zombie;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -265,6 +267,13 @@ public class ACMatch {
                 
                 // Set match status
                 ACMatch.this.status = MatchStatusEnum.STOPPED;
+                
+                //Clean the world and delete all old entities
+                List<Entity> entities = ACMatch.this.world.getWorld().getEntities();
+                for(Entity entity : entities){
+                    if(entity instanceof Player) continue;
+                    entity.remove();
+                }
                 
                 // Preinit match if
                 game.preInitNextMatch();
