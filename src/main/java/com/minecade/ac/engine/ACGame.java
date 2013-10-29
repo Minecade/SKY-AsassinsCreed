@@ -1,6 +1,5 @@
 package com.minecade.ac.engine;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,8 +38,6 @@ import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.ac.task.InvisibilityTask;
 import com.minecade.ac.task.LobbyTimerTask;
 import com.minecade.ac.world.ACWorld;
-import com.minecade.engine.MinecadePlugin;
-import com.minecade.engine.MinecadeWorld;
 import com.minecade.engine.data.MinecadeAccount;
 import com.minecade.engine.enums.PlayerTagEnum;
 import com.minecade.engine.utils.EngineUtils;
@@ -680,5 +677,12 @@ public class ACGame {
                 player.getBukkitPlayer().sendMessage(message);
             }
         }
+    }
+
+    /**
+     * @return the nextMatchPlayers
+     */
+    public List<ACPlayer> getNextMatchPlayers() {
+        return nextMatchPlayers;
     }
 }
