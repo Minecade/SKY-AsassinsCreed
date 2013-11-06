@@ -8,18 +8,26 @@ import com.minecade.ac.enums.CharacterEnum;
 
 public class InvisibilityTask extends BukkitRunnable{
 
-    final private ACPlayer player;
+    private ACPlayer player;
+    
+    /**
+     * Set player
+     * @param player
+     * @author Kvnamo
+     */
+    public void setPlayer(ACPlayer player){
+        this.player = player;
+    }
     
     private int coolingTime;
     
     /**
-     * Invisivility task constructor
-     * @param assasin
-     * @author kvnamo
+     * Set cooling time
+     * @param coolingTime
+     * @author Kvnamo
      */
-    public InvisibilityTask(final ACPlayer player){
-        this.player = player;
-        this.coolingTime = 0;
+    public void setCoolingTime(int coolingTime){
+        this.coolingTime = coolingTime;
     }
     
     /**

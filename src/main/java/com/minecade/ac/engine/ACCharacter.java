@@ -23,6 +23,7 @@ public class ACCharacter {
     public static void assassin(AssassinsCreedPlugin plugin, final ACPlayer player) { 
         
         Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            
             @Override
             public void run() {
                 
@@ -51,6 +52,7 @@ public class ACCharacter {
     public static void bodyguard(AssassinsCreedPlugin plugin, final ACPlayer player) { 
         
         Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            
             @Override
             public void run() {
                 

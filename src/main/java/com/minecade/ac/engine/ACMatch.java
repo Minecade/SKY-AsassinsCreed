@@ -13,7 +13,6 @@ import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Zombie;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -41,19 +40,29 @@ public class ACMatch {
   
     private AssassinsCreedPlugin plugin;
     
+    private int npcs;
+    
     private int time;
     
     private int countdown;
     
-    private int npcs;
+    private MatchTimerTask timerTask;
     
     private ACScoreboard acScoreboard;
     
-    private Map<String, ACPlayer> players;
+    private InvisibilityTask invisivilityTask;
     
     private List<ACPlayer> prisioners = new ArrayList<ACPlayer>();
     
-    private MatchTimerTask timerTask;
+    private Map<String, ACPlayer> players = new ConcurrentHashMap<String, ACPlayer>();
+    
+    /**
+     * Get players
+     * @author Kvnamo
+     */
+    public Map<String, ACPlayer> getPlayers(){
+        return this.players;
+    }
     
     private MatchStatusEnum status = MatchStatusEnum.STOPPED;
     
@@ -116,65 +125,68 @@ public class ACMatch {
         this.plugin = plugin;
         this.world = acWorld;
         
+        // Get config properties
+        this.time = this.plugin.getConfig().getInt("match.time");
+        
         // Initialize properties
         this.players =  new ConcurrentHashMap<String, ACPlayer>(matchPlayers);
     }
     
     /**
      * Init match 
-     * @param match players
      * @author Kvnamo
      */
-    public void init(List<ACPlayer> matchPlayers){
-        
-        this.time = this.plugin.getConfig().getInt("match.time");
+    public void init(){
         
         // Set match scoreboard
         if(this.acScoreboard == null)  this.acScoreboard = new ACScoreboard(this.plugin, false);
         this.acScoreboard.init();
         
         // Load players
-        ACPlayer player;
+        boolean loadAssassin = true;
         
-        for (int i = 0; i < matchPlayers.size(); i++) {
-            
-            // Get player and put it in list
-            player = matchPlayers.get(i);
-            this.players.put(player.getBukkitPlayer().getName(), player);
-            
-            // Set assassin
-            if(i == 0){
+        synchronized(this.players){
+            for(ACPlayer player : this.players.values()){
                 
-                // Start timer.
-                if(this.timerTask != null) this.timerTask.cancel();
-                this.timerTask = new MatchTimerTask(this.plugin, this, player.getBukkitPlayer(), 30);
-                this.timerTask.runTaskTimer(this.plugin, 10, 20l);
+                if(loadAssassin){
+                    
+                    // Start timer.
+//                    if(this.timerTask != null) this.timerTask.cancel();
+//                    this.timerTask = new MatchTimerTask(this.plugin, this, player.getBukkitPlayer(), 30);
+//                    this.timerTask.runTaskTimer(this.plugin, 10, 20l);
+                    if(this.timerTask == null) this.timerTask = new MatchTimerTask();
+                    this.timerTask.setPlugin(this.plugin);
+                    this.timerTask.setMatch(this);
+                    this.timerTask.setPlayer(player.getBukkitPlayer());
+                    this.timerTask.setCountdown(30);
+                    this.timerTask.runTaskTimer(plugin, 10, 20l);
+                    
+                    player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getAssassinLocation());
+                    player.setCharacter(CharacterEnum.ASSASSIN);
+                    ACCharacter.assassin(this.plugin, player);
+                    
+                    // Setup assassin scoreboard lives
+                    this.acScoreboard.setAssassinLives(player.getLives());
+                    
+                    // Message
+                    player.getBukkitPlayer().sendMessage(String.format(
+                        "%s%sYou are an Assassin. MISSION: Assassinate the 5 victims.", 
+                        ChatColor.RED, ChatColor.BOLD));
+                }
+                // Set navy
+                else{
+                    EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+                    player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getNavyRoomLocation());
+                    
+                     // Message
+                    player.getBukkitPlayer().sendMessage(String.format(
+                        "%sChoose one Royal Navy character to begin.", ChatColor.BLUE));
+                }
                 
-                player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getAssassinLocation());
-                player.setCharacter(CharacterEnum.ASSASSIN);
-                ACCharacter.assassin(this.plugin, player);
-                
-                // Setup assassin scoreboard lives
-                this.acScoreboard.setAssassinLives(player.getLives());
-                
-                // Message
-                player.getBukkitPlayer().sendMessage(String.format(
-                    "%s%sYou are an Assassin. MISSION: Assassinate the 5 victims.", 
-                    ChatColor.RED, ChatColor.BOLD));
+                // Setup player scoreboard
+                this.acScoreboard.assignCharacterTeam(player);
+                player.getBukkitPlayer().setScoreboard(this.acScoreboard.getScoreboard());
             }
-            // Set navy
-            else{
-                EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
-                player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getNavyRoomLocation());
-                
-                 // Message
-                player.getBukkitPlayer().sendMessage(String.format(    
-                    "%sChoose one Royal Navy character to begin.", ChatColor.BLUE));
-            }
-            
-            // Setup player scoreboard
-            this.acScoreboard.assignCharacterTeam(player);
-            player.getBukkitPlayer().setScoreboard(this.acScoreboard.getScoreboard());
         }
         
         // Load npc.
@@ -183,6 +195,7 @@ public class ACMatch {
         this.npcs = NPCEnum.values().length;
 
         for (int i = 0; i < this.npcs; i++) {
+
             npc = NPCEnum.values()[i];
             location = ((ACWorld)this.matchWorld).getNPCLocation(npc);
             
@@ -211,20 +224,22 @@ public class ACMatch {
                 
                 // Get assassin
                 if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                    
                     //Match timer
-                    if(this.timerTask != null) this.timerTask.cancel();
-                    this.timerTask = new MatchTimerTask(this.plugin, this, player.getBukkitPlayer(), this.time);
+                    if(this.timerTask == null) this.timerTask = new MatchTimerTask();
+                    this.timerTask.setCountdown(this.time);
                     this.timerTask.runTaskTimer(plugin, 10, 20l);
-                    break;
+                    
+                    // Set match status
+                    this.status = MatchStatusEnum.RUNNING;
+                    
+                    // Announcements
+                    this.broadcastMessage(String.format("%sMatch started!", ChatColor.RED));
+                    
+                    return;
                 }
             }
         }
-
-        // Set match status
-        this.status = MatchStatusEnum.RUNNING;
-        
-        // Announcements
-        this.broadcastMessage(String.format("%sMatch started!", ChatColor.RED));
     }
     
     /**
@@ -236,7 +251,8 @@ public class ACMatch {
         this.updateWinnersAndLoosers();
 
         // Start finish match timer.
-        Bukkit.getScheduler().scheduleSyncDelayedTask(this.plugin, new Runnable() {
+        Bukkit.getScheduler().runTaskLater(this.plugin, new Runnable() {
+            
             @Override
             public void run() {
                 // Get game
@@ -425,7 +441,7 @@ public class ACMatch {
             event.setRespawnLocation(((ACWorld)this.matchWorld).getAssassinLocation());
             
             // Start invisibility.
-            new InvisibilityTask(player).runTaskTimer(plugin, 10, 200l);
+            this.makeInvisible(player, 0);
             return;
         }
         
@@ -444,7 +460,7 @@ public class ACMatch {
         if(this.prisioners.size() == 1){
             
             // Every 20 seconds everyone currently in the room gets teleported to the class select room 
-            Bukkit.getScheduler().scheduleSyncDelayedTask(this.plugin, new Runnable() {
+            Bukkit.getScheduler().runTaskLater(this.plugin, new Runnable() {
                 @Override
                 public void run() {
                     ACMatch.this.releasePrisioners();
@@ -557,6 +573,35 @@ public class ACMatch {
     }
     
     /**
+     * Make invisible
+     * @param player
+     * @param cooldown
+     * @author Kvnamo
+     */
+    public void makeInvisible(final ACPlayer player, final int cooldown){
+        
+        if(this.invisivilityTask == null)  new InvisibilityTask();
+        this.invisivilityTask.setPlayer(player);
+        this.invisivilityTask.setCoolingTime(0);
+        this.invisivilityTask.runTaskTimer(plugin, 10, 200l);
+    }
+    
+    /**
+     * Hide player 
+     * @param player
+     * @author kvnamo
+     */
+    public void hidePlayer(Player bukkitPlayer, boolean hide){
+        
+        synchronized(this.players){
+            for (ACPlayer player : this.players.values()) {
+                if(hide) player.getBukkitPlayer().hidePlayer(bukkitPlayer);
+                else player.getBukkitPlayer().showPlayer(bukkitPlayer);
+            }
+        }
+    }
+    
+    /**
      * Lobby time left to start a match
      * @param countdown
      * @author Kvnamo
@@ -573,21 +618,6 @@ public class ACMatch {
         } 
     }
 
-    /**
-     * Hide player 
-     * @param player
-     * @author kvnamo
-     */
-    public void hidePlayer(Player bukkitPlayer, boolean hide){
-        
-        synchronized(this.players){
-            for (ACPlayer player : this.players.values()) {
-                if(hide) player.getBukkitPlayer().hidePlayer(bukkitPlayer);
-                else player.getBukkitPlayer().showPlayer(bukkitPlayer);
-            }
-        }
-    }
-    
     /**
      * Broadcast lobby players message
      * @param format
@@ -610,6 +640,7 @@ public class ACMatch {
         
         // Save stats in database
         Bukkit.getScheduler().runTaskAsynchronously(this.plugin, new Runnable() {
+            
             @Override
             public void run() {
                 ACMatch.this.plugin.getPersistence().updatePlayer(player.getPlayerModel());
@@ -626,6 +657,7 @@ public class ACMatch {
         
         // Update Butter Coins in central DB
         Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+            
             @Override
             public void run() {
                 int vipButterCoins = ACMatch.this.plugin.getPersistence().isPlayerStaff(bukkitPlayer) ?

@@ -15,11 +15,47 @@ public class MatchTimerTask extends BukkitRunnable{
 
     private AssassinsCreedPlugin plugin;
     
+    /**
+     * Set plugin
+     * @param plugin
+     * @author Kvnamo
+     */
+    public void setPlugin(AssassinsCreedPlugin plugin){
+        this.plugin = plugin;
+    }
+    
     private ACMatch match;
+    
+    /**
+     * Set match
+     * @param plugin
+     * @author Kvnamo
+     */
+    public void setMatch(ACMatch match){
+        this.match = match;
+    }
     
     private Player assassin;
     
+    /**
+     * Set player
+     * @param assassin
+     * @author Kvnamo
+     */
+    public void setPlayer(Player assassin){
+        this.assassin = assassin;
+    }
+    
     private int countdown;
+    
+    /**
+     * Set countdown
+     * @param countdown
+     * @author Kvnamo
+     */
+    public void setCountdown(int countdown){
+        this.countdown = countdown;
+    }
     
     private List<String> announcements;
     
@@ -31,11 +67,7 @@ public class MatchTimerTask extends BukkitRunnable{
      * @param countdown
      * @author kvnamo
      */
-    public MatchTimerTask(AssassinsCreedPlugin plugin, ACMatch match, Player assassin, int countdown){
-        this.plugin = plugin;
-        this.match = match;
-        this.assassin = assassin;
-        this.countdown = countdown;
+    public MatchTimerTask(){
         this.announcements = this.plugin.getConfig().getStringList("match.announcements");
     }
     
