@@ -11,7 +11,25 @@ public class LobbyTimerTask extends BukkitRunnable{
     
     private ACMatch match;
     
+    /**
+     * Set match
+     * @param match
+     * @author Kvnamo
+     */
+    public void setMatch(ACMatch match){
+        this.match = match;
+    }
+    
     private int countdown;
+    
+    /**
+     * Set countdown 
+     * @param countdown
+     * @author Kvnamo
+     */
+    public void setCountdown(int countdown){
+        this.countdown = countdown;
+    }
     
     /**
      * Timer task constructor
@@ -19,10 +37,8 @@ public class LobbyTimerTask extends BukkitRunnable{
      * @param countdown
      * @author kvnamo
      */
-    public LobbyTimerTask(ACGame game, ACMatch match, int countdown){
+    public LobbyTimerTask(ACGame game){
         this.game = game;
-        this.match = match;
-        this.countdown = countdown;
     }
     
     /**
@@ -36,7 +52,7 @@ public class LobbyTimerTask extends BukkitRunnable{
         this.game.timeLeft(this.countdown);
         
         if(this.countdown <= 0){
-            this.game.initNextMatch(match);
+            this.game.initNextMatch(this.match);
             super.cancel();
         }
     }

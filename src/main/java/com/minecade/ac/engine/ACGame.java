@@ -221,8 +221,15 @@ public class ACGame {
                     
                     // Add player to players collection
                     ACGame. this.players.put(bukkitPlayer.getName(), player);
-                    bukkitPlayer.teleport(ACGame.this.lobby); 
-    
+                    
+                    Bukkit.getScheduler().runTask(ACGame.this.plugin, new Runnable() {
+                        
+                        @Override
+                        public void run() {
+                            bukkitPlayer.teleport(ACGame.this.lobby);                            
+                        }
+                    });
+                     
                     // Start a match if there are enough players
                     ACGame.this.preInitNextMatch();
                 }
@@ -265,9 +272,12 @@ public class ACGame {
                             if(match.getPlayers().size() == this.matchRequiredPlayers){
                                 
                                 // Start game timer.
-                                if(this.timerTask == null) this.timerTask = new LobbyTimerTask(this, match, this.matchCountdown);
-                                this.timerTask.runTaskTimer(this.plugin, 10, 20l);
+                                if(this.timerTask != null) this.timerTask.cancel();
                                 
+                                this.timerTask = new LobbyTimerTask(this);
+                                this.timerTask.setMatch(match);
+                                this.timerTask.setCountdown(this.matchCountdown);
+                                this.timerTask.runTaskTimer(this.plugin, 10, 20l);
                                 
                                 // Update scoreboard
                                 this.acScoreboard.setPlayersToStart(this.getPlayersToStart());

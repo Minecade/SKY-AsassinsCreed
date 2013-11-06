@@ -196,10 +196,10 @@ public class ACPlayer{
             
             @Override
             public void run() {
-        EngineUtils.clearBukkitPlayer(ACPlayer.this.bukkitPlayer);
-        ACPlayer.this.bukkitPlayer.getInventory().addItem(ACInventory.getInstructionsBook());
-        ACPlayer.this.bukkitPlayer.getInventory().addItem(ACInventory.getStatsBook(ACPlayer.this));
-        ACPlayer.this.bukkitPlayer.getInventory().addItem(ACInventory.getLeaveCompass());
+                EngineUtils.clearBukkitPlayer(ACPlayer.this.bukkitPlayer);
+                ACPlayer.this.bukkitPlayer.getInventory().addItem(ACInventory.getInstructionsBook());
+                ACPlayer.this.bukkitPlayer.getInventory().addItem(ACInventory.getStatsBook(ACPlayer.this));
+                ACPlayer.this.bukkitPlayer.getInventory().addItem(ACInventory.getLeaveCompass());
             }
         });
     }

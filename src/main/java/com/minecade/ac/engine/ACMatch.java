@@ -3,6 +3,7 @@ package com.minecade.ac.engine;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
@@ -50,6 +51,8 @@ public class ACMatch {
     
     private ACScoreboard acScoreboard;
     
+    private Random random = new Random();
+    
     private InvisibilityTask invisivilityTask;
     
     private List<ACPlayer> prisioners = new ArrayList<ACPlayer>();
@@ -95,26 +98,6 @@ public class ACMatch {
         this.world = world;
     }
     
-    private MinecadeWorld matchWorld;
-
-    /**
-     * Get minecade match world
-     * @param world
-     * @author Kvnamo
-     */
-    public MinecadeWorld getMinecadeMatchWorld(){
-        return this.matchWorld;
-    }
-    
-    /**
-     * Set minecade match world
-     * @param world
-     * @author Kvnamo
-     */
-    public void setMinecadeMatchWorld(MinecadeWorld matchWorld){
-        this.matchWorld = matchWorld;
-    }
-    
     /**
      * ACMatch constructor
      * @param plugin
@@ -150,18 +133,18 @@ public class ACMatch {
                 
                 if(loadAssassin){
                     
+                    loadAssassin = false;
+                    
                     // Start timer.
-//                    if(this.timerTask != null) this.timerTask.cancel();
-//                    this.timerTask = new MatchTimerTask(this.plugin, this, player.getBukkitPlayer(), 30);
-//                    this.timerTask.runTaskTimer(this.plugin, 10, 20l);
-                    if(this.timerTask == null) this.timerTask = new MatchTimerTask();
-                    this.timerTask.setPlugin(this.plugin);
+                    if(this.timerTask != null) this.timerTask.cancel(); 
+                        
+                    this.timerTask = new MatchTimerTask(this.plugin, this.random);
                     this.timerTask.setMatch(this);
                     this.timerTask.setPlayer(player.getBukkitPlayer());
                     this.timerTask.setCountdown(30);
-                    this.timerTask.runTaskTimer(plugin, 10, 20l);
+                    this.timerTask.runTaskTimer(this.plugin, 10, 20l);
                     
-                    player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getAssassinLocation());
+                    player.getBukkitPlayer().teleport(((ACWorld)this.world).getAssassinLocation());
                     player.setCharacter(CharacterEnum.ASSASSIN);
                     ACCharacter.assassin(this.plugin, player);
                     
@@ -176,7 +159,7 @@ public class ACMatch {
                 // Set navy
                 else{
                     EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
-                    player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getNavyRoomLocation());
+                    player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyRoomLocation());
                     
                      // Message
                     player.getBukkitPlayer().sendMessage(String.format(
@@ -197,7 +180,7 @@ public class ACMatch {
         for (int i = 0; i < this.npcs; i++) {
 
             npc = NPCEnum.values()[i];
-            location = ((ACWorld)this.matchWorld).getNPCLocation(npc);
+            location = ((ACWorld)this.world).getNPCLocation(npc);
             
             // Spawn npc
             ACCharacter.zombie(this.plugin, (Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE), npc);
@@ -226,10 +209,14 @@ public class ACMatch {
                 if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
                     
                     //Match timer
-                    if(this.timerTask == null) this.timerTask = new MatchTimerTask();
-                    this.timerTask.setCountdown(this.time);
-                    this.timerTask.runTaskTimer(plugin, 10, 20l);
+                    if(this.timerTask != null) this.timerTask.cancel();
                     
+                    this.timerTask = new MatchTimerTask(this.plugin, this.random);
+                    this.timerTask.setMatch(this);
+                    this.timerTask.setPlayer(player.getBukkitPlayer());
+                    this.timerTask.setCountdown(this.time);
+                    this.timerTask.runTaskTimer(this.plugin, 10, 20l);
+
                     // Set match status
                     this.status = MatchStatusEnum.RUNNING;
                     
@@ -438,7 +425,7 @@ public class ACMatch {
             int lives = player.getLives();
             ACCharacter.assassin(this.plugin, player);
             player.setLives(lives);
-            event.setRespawnLocation(((ACWorld)this.matchWorld).getAssassinLocation());
+            event.setRespawnLocation(((ACWorld)this.world).getAssassinLocation());
             
             // Start invisibility.
             this.makeInvisible(player, 0);
@@ -451,7 +438,7 @@ public class ACMatch {
         // Add to prision
         player.setCharacter(null);
         this.prisioners.add(player);
-        event.setRespawnLocation(((ACWorld)this.matchWorld).getKillBoxLocation());
+        event.setRespawnLocation(((ACWorld)this.world).getKillBoxLocation());
         
         // Update scoreboard
         this.acScoreboard.setPrisioners(this.prisioners.size());
@@ -516,7 +503,7 @@ public class ACMatch {
         
         synchronized (this.prisioners) {    
             for(ACPlayer player : this.prisioners){
-                player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getNavyRoomLocation());
+                player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyRoomLocation());
             }
             
             this.prisioners.clear();
@@ -542,33 +529,24 @@ public class ACMatch {
             }
         }
         else if(player.getCharacter() == null){
-            this.characterSelection(player);
-        }
-    }
-    
-    /**
-     * Character selection
-     * @param player
-     * @author Kvnamo
-     */
-    private void characterSelection(final ACPlayer player){
-
-        Location location = player.getBukkitPlayer().getLocation().getBlock().getLocation();
-        
-        if(((ACWorld)this.matchWorld).getBodyguardLocation().equals(location)){
-            player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getNavyLocation());
-            player.setCharacter(CharacterEnum.BODYGUARD);
-            ACCharacter.bodyguard(this.plugin, player);
-        }
-        else if(((ACWorld)this.matchWorld).getMusketeerLocation().equals(location)){
-            player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getNavyLocation());
-            player.setCharacter(CharacterEnum.MUSKETEER);
-            ACCharacter.musketeer(this.plugin, player);
-        }
-        else if(((ACWorld)this.matchWorld).getSwordsmanLocation().equals(location)){
-            player.getBukkitPlayer().teleport(((ACWorld)this.matchWorld).getNavyLocation());
-            player.setCharacter(CharacterEnum.SWORDSMAN);
-            ACCharacter.swordsman(this.plugin, player);
+            
+            Location location = player.getBukkitPlayer().getLocation().getBlock().getLocation();
+            
+            if(((ACWorld)this.world).getBodyguardLocation().equals(location)){
+                player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyLocation());
+                player.setCharacter(CharacterEnum.BODYGUARD);
+                ACCharacter.bodyguard(this.plugin, player);
+            }
+            else if(((ACWorld)this.world).getMusketeerLocation().equals(location)){
+                player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyLocation());
+                player.setCharacter(CharacterEnum.MUSKETEER);
+                ACCharacter.musketeer(this.plugin, player);
+            }
+            else if(((ACWorld)this.world).getSwordsmanLocation().equals(location)){
+                player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyLocation());
+                player.setCharacter(CharacterEnum.SWORDSMAN);
+                ACCharacter.swordsman(this.plugin, player);
+            }
         }
     }
     

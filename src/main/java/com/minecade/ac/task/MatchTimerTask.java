@@ -13,17 +13,6 @@ import com.minecade.ac.plugin.AssassinsCreedPlugin;
 
 public class MatchTimerTask extends BukkitRunnable{
 
-    private AssassinsCreedPlugin plugin;
-    
-    /**
-     * Set plugin
-     * @param plugin
-     * @author Kvnamo
-     */
-    public void setPlugin(AssassinsCreedPlugin plugin){
-        this.plugin = plugin;
-    }
-    
     private ACMatch match;
     
     /**
@@ -57,9 +46,9 @@ public class MatchTimerTask extends BukkitRunnable{
         this.countdown = countdown;
     }
     
+    private Random random;
+
     private List<String> announcements;
-    
-    public Random random = new Random();
     
     /**
      * Timer task constructor
@@ -67,8 +56,9 @@ public class MatchTimerTask extends BukkitRunnable{
      * @param countdown
      * @author kvnamo
      */
-    public MatchTimerTask(){
-        this.announcements = this.plugin.getConfig().getStringList("match.announcements");
+    public MatchTimerTask(AssassinsCreedPlugin plugin, Random random){
+        this.random = random;
+        this.announcements = plugin.getConfig().getStringList("match.announcements");
     }
     
     /**
@@ -97,12 +87,12 @@ public class MatchTimerTask extends BukkitRunnable{
         // If countdown is cero cancel this
         if(this.countdown <= 0){
             
+            super.cancel();
+            
             if(MatchStatusEnum.RUNNING.equals(this.match.getStatus())){
                 this.match.finish();
             }
             else this.match.start();
-                
-            super.cancel();
         }
     }
 }
