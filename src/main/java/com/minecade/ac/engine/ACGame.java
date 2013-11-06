@@ -665,4 +665,11 @@ public class ACGame {
             }
         }
     }
+
+    /**
+     * @return the nextMatchPlayers
+     */
+    public List<ACPlayer> getNextMatchPlayers() {
+        return nextMatchPlayers;
+    }
 }

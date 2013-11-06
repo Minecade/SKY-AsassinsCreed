@@ -46,8 +46,9 @@ public class ACPersistence extends MinecadePersistence {
             server.setServerId(super.plugin.getConfig().getInt("server.id"));
         }        
 
-        server.setMaxPlayers(super.plugin.getConfig().getInt("server.max-players"));
-        server.setOnlinePlayers(super.plugin.getServer().getOnlinePlayers().length);
+        server.setMaxPlayers(super.plugin.getConfig().getInt("match.required-players"));
+        int playerCount = ((AssassinsCreedPlugin)super.plugin).getGame().getNextMatchPlayers().size();
+        server.setOnlinePlayers(playerCount);
         server.setStatus(ServerStatusEnum.WAITING_FOR_PLAYERS);
         server.setWorldName(worldName);
         
@@ -94,7 +95,7 @@ public class ACPersistence extends MinecadePersistence {
      */
     public void updateServerPlayers() {
         
-        final int playerCount = super.plugin.getServer().getOnlinePlayers().length;
+        final int playerCount = ((AssassinsCreedPlugin)super.plugin).getGame().getNextMatchPlayers().size();
         if (playerCount == this.lastPlayerCount) {
             return;
         }
