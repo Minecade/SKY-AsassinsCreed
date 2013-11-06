@@ -36,7 +36,6 @@ import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.enums.MatchStatusEnum;
 import com.minecade.ac.enums.ServerStatusEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
-import com.minecade.ac.task.InvisibilityTask;
 import com.minecade.ac.task.LobbyTimerTask;
 import com.minecade.ac.world.ACWorld;
 import com.minecade.engine.data.MinecadeAccount;
@@ -49,22 +48,22 @@ public class ACGame {
 
     private final AssassinsCreedPlugin plugin;
     
+    private Location lobby;
+
     private int maxPlayers;
 
     private int vipPlayers;
 
     private int matchCountdown; 
     
-    private int matchRequiredPlayers;  
-    
     private List<ACMatch> matches;
-    
-    private Map<String, ACPlayer> players;
-        
+
     private LobbyTimerTask timerTask;
 
-    private Location lobby;
-    
+    private int matchRequiredPlayers;  
+
+    private Map<String, ACPlayer> players;
+
     /**
      * Get lobby location in game.
      * @return lobby location
@@ -105,6 +104,22 @@ public class ACGame {
         }
         
         return playersToStart;
+    }
+    
+    /**
+     * Get next match players
+     * @return players
+     * @author Kvnamo
+     */
+    public int getNextMatchPlayers() {
+        
+        for(ACMatch match : this.matches){
+            if(MatchStatusEnum.STOPPED.equals(match.getStatus())){
+                return match.getPlayers().size();
+            }
+        }
+        
+        return 0;
     }
     
     /**
@@ -250,9 +265,6 @@ public class ACGame {
                             if(match.getPlayers().size() == this.matchRequiredPlayers){
                                 
                                 // Start game timer.
-//                                if(this.timerTask != null) this.timerTask.cancel();
-//                                this.timerTask = new LobbyTimerTask(this, match, this.matchCountdown);
-//                                this.timerTask.runTaskTimer(plugin, 10, 20l);
                                 if(this.timerTask == null) this.timerTask = new LobbyTimerTask(this, match, this.matchCountdown);
                                 this.timerTask.runTaskTimer(this.plugin, 10, 20l);
                                 
@@ -664,12 +676,5 @@ public class ACGame {
                 player.getBukkitPlayer().sendMessage(message);
             }
         }
-    }
-
-    /**
-     * @return the nextMatchPlayers
-     */
-    public List<ACPlayer> getNextMatchPlayers() {
-        return nextMatchPlayers;
     }
 }

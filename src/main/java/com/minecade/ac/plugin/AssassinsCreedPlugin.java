@@ -84,6 +84,7 @@ public class AssassinsCreedPlugin extends MinecadePlugin {
      */
     @Override
     public void onEnable(){
+        
         super.onEnable();
         super.getServer().getLogger().info("onEnable has been invoked!");
         
