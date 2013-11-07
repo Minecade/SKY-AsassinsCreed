@@ -180,7 +180,6 @@ public class ACGame {
         this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(3), this.matchRequiredPlayers));
     }
     
-    
     /**
      * Call when player join the match
      * @param PlayerJoinEvent
