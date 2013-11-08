@@ -558,7 +558,8 @@ public class ACMatch {
      */
     public void makeInvisible(final ACPlayer player, final int cooldown){
         
-        if(this.invisivilityTask == null)  new InvisibilityTask();
+        if(this.invisivilityTask != null) this.invisivilityTask.cancel();  
+        this.invisivilityTask = new InvisibilityTask();
         this.invisivilityTask.setPlayer(player);
         this.invisivilityTask.setCoolingTime(0);
         this.invisivilityTask.runTaskTimer(plugin, 10, 200l);
