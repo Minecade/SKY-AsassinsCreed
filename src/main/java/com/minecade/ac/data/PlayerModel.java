@@ -18,6 +18,19 @@ public class PlayerModel {
     @Id
     @Column(name = "username", length = 16, unique = true, nullable = false)
     private String username;
+    @Column(name = "wins", nullable = false)
+    private int wins;
+    @Column(name = "losses", nullable = false)
+    private int losses;
+    @Column(name = "time_played", nullable = false)
+    private int timePlayed;
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "last_seen", nullable = false)
+    private Date lastSeen;
+    @Column(name = "kills", nullable = false)
+    private long kills;
+    @Column(name = "deaths", nullable = false)
+    private long deaths;
     
     /**
      * Get username
@@ -37,9 +50,6 @@ public class PlayerModel {
         this.username = username;
     }
     
-    @Column(name = "wins", nullable = false)
-    private int wins;
-    
     /**
      * Get wins
      * @return wins
@@ -57,10 +67,6 @@ public class PlayerModel {
     public void setWins(int wins) {
         this.wins = wins;
     }
-    
-    @Column(name = "losses", nullable = false)
-    private int losses;
-    
     /**
      * Get losses
      * @return losses
@@ -78,10 +84,6 @@ public class PlayerModel {
     public void setLosses(int losses) {
         this.losses = losses;
     }
-    
-    @Column(name = "time_played", nullable = false)
-    private int timePlayed;
-    
     /**
      * Get total time played
      * @return total time played
@@ -99,11 +101,6 @@ public class PlayerModel {
     public void setTimePlayed(int timePlayed) {
         this.timePlayed = timePlayed;
     }
-    
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "last_seen", nullable = false)
-    private Date lastSeen;
-
     /**
      * Get last seen 
      * @return lastSeen
@@ -120,5 +117,33 @@ public class PlayerModel {
      */
     public void setLastSeen(Date lastSeen) {
         this.lastSeen = lastSeen;
+    }
+
+    /**
+     * @return the kills
+     */
+    public long getKills() {
+        return kills;
+    }
+
+    /**
+     * @param kills the kills to set
+     */
+    public void setKills(long kills) {
+        this.kills = kills;
+    }
+
+    /**
+     * @return the deaths
+     */
+    public long getDeaths() {
+        return deaths;
+    }
+
+    /**
+     * @param deaths the deaths to set
+     */
+    public void setDeaths(long deaths) {
+        this.deaths = deaths;
     }
 }

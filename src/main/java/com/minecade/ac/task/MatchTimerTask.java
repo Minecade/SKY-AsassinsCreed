@@ -1,98 +1,69 @@
 package com.minecade.ac.task;
 
-import java.util.List;
-import java.util.Random;
-
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import com.minecade.ac.engine.ACMatch;
-import com.minecade.ac.enums.MatchStatusEnum;
-import com.minecade.ac.plugin.AssassinsCreedPlugin;
+import com.minecade.ac.engine.ACPlayer;
 
-public class MatchTimerTask extends BukkitRunnable{
+
+
+public class MatchTimerTask extends BukkitRunnable {
 
     private ACMatch match;
-    
-    /**
-     * Set match
-     * @param plugin
-     * @author Kvnamo
-     */
-    public void setMatch(ACMatch match){
-        this.match = match;
-    }
-    
-    private Player assassin;
-    
-    /**
-     * Set player
-     * @param assassin
-     * @author Kvnamo
-     */
-    public void setPlayer(Player assassin){
-        this.assassin = assassin;
-    }
-    
     private int countdown;
-    
-    /**
-     * Set countdown
-     * @param countdown
-     * @author Kvnamo
-     */
-    public void setCountdown(int countdown){
-        this.countdown = countdown;
-    }
-    
-    private Random random;
 
-    private List<String> announcements;
-    
     /**
      * Timer task constructor
-     * @param match
+     * 
+     * @param game
      * @param countdown
      * @author kvnamo
      */
-    public MatchTimerTask(AssassinsCreedPlugin plugin, Random random){
-        this.random = random;
-        this.announcements = plugin.getConfig().getStringList("match.announcements");
+    public MatchTimerTask(ACMatch match, int countdown) {
+        this.match = match;
+        this.countdown = countdown;
     }
-    
+
     /**
      * Sync task runned by bukkit scheduler
-     * @author kvnamo
+     * 
+     * @author jdgil
      */
     @Override
     public void run() {
-        
-        // Gains 1 level every 10 seconds
-        if(this.countdown % 10 == 0){
-            assassin.setLevel(assassin.getLevel() + 1);
-        }
-        
-        // Announcements
-        if(this.countdown % 30 == 0){
-            this.match.broadcastMessage(ChatColor.translateAlternateColorCodes(
-                '&', this.announcements.get(random.nextInt(this.announcements.size()))));
-        }
-        
         this.countdown--;
-        
-        // Set time left
+
         this.match.timeLeft(this.countdown);
-        
-        // If countdown is cero cancel this
-        if(this.countdown <= 0){
-            
-            super.cancel();
-            
-            if(MatchStatusEnum.RUNNING.equals(this.match.getStatus())){
-                this.match.finish();
+        this.match.updateScoreBoard();
+        if (this.countdown == 0) {
+            switch (match.getStatus()) {
+            case STARTING_MATCH:
+                match.prepareMatch();
+                this.countdown = this.match.getTimeLeft();
+                return;
+            case READY_TO_START:
+                this.match.start();
+                this.countdown = this.match.getTimeLeft();
+                return;
+            case RUNNING:
+                this.match.verifyGameover();
+                this.countdown = this.match.getTimeLeft();
+                return;
+            case STOPPED:
+                this.match.finish(false);
+                break;
+            default:
+                break;
             }
-            else this.match.start();
+            super.cancel();
         }
+    }
+
+    /**
+     * @param countdown
+     *            the countdown to set
+     */
+    public void setCountdown(int countdown) {
+        this.countdown = countdown;
     }
 }

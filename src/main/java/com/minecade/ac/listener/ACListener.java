@@ -4,11 +4,17 @@ import org.bukkit.GameMode;
 import org.bukkit.block.Chest;
 import org.bukkit.block.DoubleChest;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.LeavesDecayEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.entity.EntityTargetEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
@@ -46,6 +52,11 @@ public class ACListener implements Listener{
         this.plugin.getGame().initWorld(event); 
     }
     
+    @EventHandler
+    public void onEntityTarget(final EntityTargetEvent event){
+        this.plugin.getGame().entityTarget(event);
+    }
+    
     /**
      * On PlayerJoinEvent when player joins the match.
      * @param playerJoinEvent
@@ -70,11 +81,6 @@ public class ACListener implements Listener{
         this.plugin.getGame().playerQuit(event);
     }
     
-      /**
-      * On PlayerDeathEvent when player dies
-      * @param playerDeathEvent
-      * @author kvnamo
-      */
      @EventHandler
      public void onEtityDeath(EntityDeathEvent event) {
          this.plugin.getGame().entityDeath(event);
@@ -92,21 +98,26 @@ public class ACListener implements Listener{
          this.plugin.getGame().playerRespawn(event); 
      }
      
-      /**
-      * Call when a entity is damage.
-      * @param event
-      * @author kvnamo
-      */
+     @EventHandler
+     public void onPlayerDeath(PlayerDeathEvent event) {
+         this.plugin.getGame().playerDeath(event); 
+     }
+     
      @EventHandler
      public void onEntityDamage(EntityDamageEvent event) {
          this.plugin.getGame().entityDamage(event);
+     }   
+     
+     @EventHandler
+     public void onEntityDamageByEntityEvent(EntityDamageByEntityEvent event) {
+         this.plugin.getGame().entityDamagedByEntity(event);
      }
      
-    /**
-     * On player move
-     * @param event
-     * @author kvnamo
-     */
+     @EventHandler
+     public void onEntityShootBowEvent(EntityShootBowEvent  event){
+         this.plugin.getGame().entityShootBowEvent(event);
+     }
+     
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event){
         this.plugin.getGame().playerMove(event);
@@ -188,21 +199,17 @@ public class ACListener implements Listener{
         
     }
     
-    /**
-     * Call when a block breaks.
-     * @param event
-     * @author: kvnamo
-     */
+    @EventHandler
+    public void onCreatureSpawnEvent(final CreatureSpawnEvent event){
+        this.plugin.getServer().getLogger().info("CreatureSpawnEvent");
+        this.plugin.getGame().creatureSpawn(event);
+    }
+    
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         event.setCancelled(true);
     }
     
-    /**
-     * Call when LeavesDecayEvent
-     * @param event
-     * @author kvnamo
-     */
     @EventHandler
     public void onLeafDecay(LeavesDecayEvent event) {
         event.setCancelled(true);

@@ -1,102 +1,76 @@
 package com.minecade.ac.engine;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Zombie;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
+import com.minecade.ac.data.PlayerModel;
 import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.enums.MatchStatusEnum;
+import com.minecade.ac.enums.ServerStatusEnum;
 import com.minecade.ac.enums.NPCEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
-import com.minecade.ac.task.InvisibilityTask;
 import com.minecade.ac.task.MatchTimerTask;
-import com.minecade.ac.world.ACWorld;
+import com.minecade.ac.world.ACBaseWorld;
+import com.minecade.engine.MinecadePlugin;
 import com.minecade.engine.MinecadeWorld;
+import com.minecade.engine.enums.PlayerTagEnum;
 import com.minecade.engine.settings.SettingsEnum;
 import com.minecade.engine.settings.SettingsManager;
+import com.minecade.engine.task.FireworksTask;
 import com.minecade.engine.utils.EngineUtils;
 
 public class ACMatch {
   
     private AssassinsCreedPlugin plugin;
     
-    private int npcs;
-    
+    private List<Zombie> npcs;
     private int time;
-    
-    private int countdown;
-    
+    private int timeLeft;
+    private int readyCountdown;
     private MatchTimerTask timerTask;
-    
+    private BukkitTask keepZombiesInplaceTask;
     private ACScoreboard acScoreboard;
-    
-    private Random random = new Random();
-    
-    private InvisibilityTask invisivilityTask;
-    
-    private List<ACPlayer> prisioners = new ArrayList<ACPlayer>();
-    
-    private Map<String, ACPlayer> players = new ConcurrentHashMap<String, ACPlayer>();
-    
-    /**
-     * Get players
-     * @author Kvnamo
-     */
-    public Map<String, ACPlayer> getPlayers(){
-        return this.players;
-    }
-    
-    private MatchStatusEnum status = MatchStatusEnum.STOPPED;
-    
-    /**
-     * Match status
-     * @return status
-     * @author Kvnamo
-     */
-    public MatchStatusEnum getStatus(){
-        return this.status;
-    }
-    
-    private MinecadeWorld world;
-
-    /**
-     * Get minecade world
-     * @param world
-     * @author Kvnamo
-     */
-    public MinecadeWorld getMinecadeWorld(){
-        return this.world;
-    }
-    
-    /**
-     * Set minecade world
-     * @param world
-     * @author Kvnamo
-     */
-    public void setMinecadeWorld(MinecadeWorld world){
-        this.world = world;
-    }
+    private String matchName;
+    private Map<String, ACPlayer> players; 
+    private Map<String, ACPlayer> spectators;
+    private static final String LOBBY = "lobby1";
+    private static int ASSASSIN_LIVES = 3;
+    private int requiredPlayersToMatch;
+    private ACBaseWorld world;
+    private MatchStatusEnum status;
     
     /**
      * ACMatch constructor
@@ -104,15 +78,226 @@ public class ACMatch {
      * @param acWorld
      * @author Kvnamo
      */
-    public ACMatch(AssassinsCreedPlugin plugin, ACWorld acWorld, int matchPlayers){
+    public ACMatch(AssassinsCreedPlugin plugin, String matchName, Class<MinecadeWorld> classWorld){
         this.plugin = plugin;
-        this.world = acWorld;
+        this.matchName = matchName;
+        this.npcs = new ArrayList<>();
         
         // Get config properties
         this.time = this.plugin.getConfig().getInt("match.time");
         
+        //FIXME get this from config
+        this.readyCountdown = 30;
+        
         // Initialize properties
-        this.players =  new ConcurrentHashMap<String, ACPlayer>(matchPlayers);
+        this.players =  new ConcurrentHashMap<String, ACPlayer>();
+        this.spectators = new ConcurrentHashMap<String, ACPlayer>();
+        this.requiredPlayersToMatch = plugin.getConfig().getInt("match.required-players");
+        this.status = MatchStatusEnum.STOPPED;
+        
+        this.acScoreboard = new ACScoreboard(this.plugin);
+        // load world
+        try {
+            MinecadeWorld minecadeWorld = classWorld.getConstructor(MinecadePlugin.class).newInstance(this.plugin);
+            this.world = (ACBaseWorld) minecadeWorld;
+            Bukkit.getLogger().info(String.format("World was created sucessfully: %s", classWorld.getName()));
+        } catch (Exception e) {
+            Bukkit.getLogger().severe(String.format("Unable to create the world"));
+            e.printStackTrace();
+        }
+    }
+    
+    public synchronized void playerJoin(ACPlayer player){
+        if (player == null) {
+            Bukkit.getLogger().severe(String.format("Player is null in match.playerJoin"));
+            return;
+        }
+        switch(this.status){
+        case STARTING_MATCH:
+            synchronized (this.players) {
+                if(this.requiredPlayersToMatch > this.players.size()){
+                    if (this.players.containsKey(player.getBukkitPlayer().getName())) {
+                        player.getBukkitPlayer().sendMessage(String.format("Player %s is already in this match", player.getBukkitPlayer().getName()));
+                        return;
+                    }
+                    
+                    this.players.put(player.getBukkitPlayer().getName(), player);
+                    EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+                    
+                    this.acScoreboard.assignPlayerTeam(player);
+                    //this.acScoreboard.setMatchPlayers(this.players.size());
+                    player.getBukkitPlayer().setScoreboard(this.getAcScoreboard().getScoreboard());
+                } else {
+                    //add spectators
+                    if(player.getMinecadeAccount().isVip() || plugin.getPersistence().isPlayerStaff(player.getBukkitPlayer())){
+                        this.addSpectatorToMatch(player, plugin.getGame().getLobbySpawnLocation());
+                    } else {
+                        this.teleportToLobby(player.getBukkitPlayer(), plugin.getConfig().getString("server.full-message"));
+                        Bukkit.getLogger().severe(String.format("Disconect linea match300"));
+                    }
+                }
+            }
+            return;
+        case READY_TO_START:
+            return;
+        case RUNNING:
+            //add spectators
+            if(player.getMinecadeAccount().isVip() || plugin.getPersistence().isPlayerStaff(player.getBukkitPlayer())){
+                this.addSpectatorToMatch(player, this.world.getAssassinSpawn());
+            } else {
+                this.teleportToLobby(player.getBukkitPlayer(), plugin.getConfig().getString("server.full-message"));
+            }
+            return;
+        case STOPPED:
+            this.teleportToLobby(player.getBukkitPlayer(), null);
+            return;
+        default:
+            break;
+        }
+    }
+    
+    public void onPlayerInteract(PlayerInteractEvent event, final ACPlayer player){
+        
+        switch(this.status){
+        case STARTING_MATCH:
+            break;
+        case READY_TO_START:
+            break;
+        case STOPPED:
+            break;
+        case RUNNING:
+            if(player.getBukkitPlayer().getItemInHand() != null){
+                ItemStack item = player.getBukkitPlayer().getItemInHand();
+                //Emerald invisibility
+                if(ACInventory.getInvisibleEmerald().getType().equals(item.getType())){
+                    
+                    if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                        if(!player.isCooling()){
+                            // Start invisibility.
+                            player.setCooling(true);
+                            player.getBukkitPlayer().getInventory().setArmorContents(null);
+                            player.getBukkitPlayer().setItemInHand(null);
+                            player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 20 * 10, 1));
+                            player.getBukkitPlayer().sendMessage(String.format("%sYou are invisible for the next %s10%s seconds.", 
+                                    ChatColor.DARK_GRAY, ChatColor.AQUA, ChatColor.DARK_GRAY));
+                            broadcastMessageToNavys(String.format("%sWatch out: %sAssassin %sis invisible for the next %s10%s seconds!", 
+                                    ChatColor.GOLD, ChatColor.RED, ChatColor.DARK_GRAY, ChatColor.AQUA, ChatColor.DARK_GRAY));
+                            //put the armor when invisibility has gone
+                            Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+                                @Override
+                                public void run() {
+                                    player.getBukkitPlayer().getInventory().setArmorContents(ACInventory.getAssassinArmor());
+                                    player.getBukkitPlayer().setItemInHand(ACInventory.getInvisibleEmerald());
+                                }
+                            }, 20 * 10);
+                            //remove cooling down property after 30 seconds
+                            Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+                                @Override
+                                public void run() {
+                                    if(player.getCurrentMatchName() != null && player.getCurrentMatchName().equals(ACMatch.this.getMatchName()) && 
+                                            ACMatch.this.getStatus().equals(MatchStatusEnum.RUNNING)){
+                                        player.setCooling(false);
+                                        player.getBukkitPlayer().sendMessage(String.format("[%s%s%s]%sYou can use your %semerald %sagain", 
+                                                ChatColor.YELLOW, player.getBukkitPlayer().getName(), ChatColor.RESET, ChatColor.DARK_GRAY, 
+                                                ChatColor.AQUA, ChatColor.DARK_GRAY));
+                                    }
+                                }
+                            }, 20 * 30);
+                        } else {
+                            player.getBukkitPlayer().sendMessage(String.format("%sYou are still cooling down. Wait for use invisibility again.", ChatColor.AQUA));
+                        }
+                    }
+                }
+                //Smoke Bomb
+                if(ACInventory.getSmokeBomb().getType().equals(item.getType())){
+                    if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                        final int slot = player.getBukkitPlayer().getInventory().getHeldItemSlot();
+                        //set the bomb in the same place 1 sec after it was thrown
+                        Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+                            @Override
+                            public void run() {
+                                if(!player.getBukkitPlayer().getInventory().contains(ACInventory.getSmokeBomb().getType())){
+                                    player.getBukkitPlayer().getInventory().setItem(slot, ACInventory.getSmokeBomb());
+                                }
+                            }
+                        }, 20);
+                    }
+                }
+                //Place finder
+                if(ACInventory.getPlaceFinder().getType().equals(item.getType())){
+                    if(!this.spectators.containsKey(player.getBukkitPlayer().getName())){
+                        ACPlayer assassin = this.getAssassin();
+                        if(assassin != null && assassin.getBukkitPlayer().getName().equalsIgnoreCase(player.getBukkitPlayer().getName())){
+                            Zombie target = this.findTargetsInMatch(assassin);
+                            if(target == null){
+                                assassin.getBukkitPlayer().sendMessage(
+                                        String.format("%sYou don't have any target in the %smatch", ChatColor.DARK_GRAY, ChatColor.RED));
+                                return;
+                            } else {
+                                assassin.getBukkitPlayer().sendMessage(
+                                        String.format("%sThe Place finder is now pointing to the nearest %sTarget[%s%s%s]", ChatColor.DARK_GRAY, ChatColor.RED, 
+                                                ChatColor.YELLOW, target.getCustomName(), ChatColor.RED));
+                                return;
+                            }
+                        } else {
+                            //compass was used by navy
+                        }
+                    } else {
+                        //compass was used by spectator
+                        EngineUtils.disconnect(player.getBukkitPlayer(), LOBBY, null);
+                    }
+                    Bukkit.getLogger().severe(String.format("Compass Place Finder was used for a navy"));
+                    return;
+                }
+            }
+            if(Action.RIGHT_CLICK_BLOCK.equals(event.getAction())){
+                if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                    //ACShop.shop(this.plugin, player);
+                }
+                else {
+                    //event.setCancelled(true);
+                }
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    
+    /**
+     * 
+     * @param player
+     * @return
+     */
+    public void entityDamagedByVoid(ACPlayer player) {
+        // cancel all kind of damage if player is not in a match
+        switch (this.status) {
+        case RUNNING:
+            player.getBukkitPlayer().teleport(this.world.getNavyRandomSpawn());
+            break;
+        case STOPPED:
+        case STARTING_MATCH:
+            player.getBukkitPlayer().teleport(plugin.getGame().getLobbySpawnLocation());
+            break;
+        case READY_TO_START:
+            break;
+        }
+    }
+    
+    private void addSpectatorToMatch(ACPlayer player, Location respawnLocation){
+        this.spectators.remove(player.getBukkitPlayer().getName());
+        this.spectators.put(player.getBukkitPlayer().getName(), player);
+        player.getBukkitPlayer().setAllowFlight(true);
+        EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+        this.hidePlayer(player.getBukkitPlayer());
+        player.getBukkitPlayer().setCanPickupItems(false);
+        player.getBukkitPlayer().getInventory().addItem(ACInventory.getLeaveCompass());
+        player.getBukkitPlayer().sendMessage(String.format("%s%sYou are now spectating the match!", ChatColor.DARK_PURPLE, ChatColor.BOLD));
+        //if spectator is added respawn location must be null, respawn event make the teleport to respawn point
+        if(respawnLocation != null)
+            player.getBukkitPlayer().teleport(respawnLocation);
+        
+        this.plugin.getServer().getLogger().severe(String.format("adding spectator to match: %s", player.getBukkitPlayer().getName()));
     }
     
     /**
@@ -121,78 +306,131 @@ public class ACMatch {
      */
     public void init(){
         
-        // Set match scoreboard
-        if(this.acScoreboard == null)  this.acScoreboard = new ACScoreboard(this.plugin, false);
-        this.acScoreboard.init();
+      //set next match to GBgame
+        this.plugin.getGame().setNextMatch();
         
-        // Load players
-        boolean loadAssassin = true;
+        // Start game timer.
+        if(timerTask != null){
+            timerTask.cancel();
+        }
+        this.timerTask = new MatchTimerTask(this, 10);
+        this.timerTask.runTaskTimer(plugin, 1l, 20l);
+        
+        // Set match scoreboard
+        if(this.acScoreboard == null)  this.acScoreboard = new ACScoreboard(this.plugin);
+    }
+    
+    private ACPlayer selectAssassin(Collection<ACPlayer> players){
+        if (players.size() <= 0)
+            return null;
+        
+        Collection<ACPlayer> tempPlayers = new ArrayList<ACPlayer>(players);
+        ACPlayer assassin = (ACPlayer) tempPlayers.toArray()[plugin.getRandom().nextInt(tempPlayers.size())];
+        assassin.setCharacter(CharacterEnum.ASSASSIN);
+        assassin.setLives(ASSASSIN_LIVES);
+        return assassin;
+    }
+    
+    public void prepareMatch(){
+        
+        //start this match
+        this.status = MatchStatusEnum.READY_TO_START;
+        
+        final ACPlayer assassin = this.selectAssassin(this.players.values());
+        final ArrayList<ACPlayer> navys = new ArrayList<>();
+        
+        if(assassin == null){
+            Bukkit.getLogger().severe(String.format(
+                    "ACMatch line 296: Something was wrong with selecting assassin, match must end, Players in match: %s", this.players.size()));
+            this.verifyGameover();
+        }
         
         synchronized(this.players){
             for(ACPlayer player : this.players.values()){
-                
-                if(loadAssassin){
-                    
-                    loadAssassin = false;
-                    
-                    // Start timer.
-                    if(this.timerTask != null) this.timerTask.cancel(); 
-                        
-                    this.timerTask = new MatchTimerTask(this.plugin, this.random);
-                    this.timerTask.setMatch(this);
-                    this.timerTask.setPlayer(player.getBukkitPlayer());
-                    this.timerTask.setCountdown(30);
-                    this.timerTask.runTaskTimer(this.plugin, 10, 20l);
-                    
-                    player.getBukkitPlayer().teleport(((ACWorld)this.world).getAssassinLocation());
+                player.getBukkitPlayer().setGameMode(GameMode.SURVIVAL);
+                EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+                if(player.getBukkitPlayer().getName().equalsIgnoreCase(assassin.getBukkitPlayer().getName())){
+                    //player is the assassin
+                    player.getBukkitPlayer().teleport(this.world.getNavyRoomLocation());
                     player.setCharacter(CharacterEnum.ASSASSIN);
-                    ACCharacter.assassin(this.plugin, player);
-                    
-                    // Setup assassin scoreboard lives
-                    this.acScoreboard.setAssassinLives(player.getLives());
-                    
                     // Message
                     player.getBukkitPlayer().sendMessage(String.format(
-                        "%s%sYou are an Assassin. MISSION: Assassinate the 5 victims.", 
-                        ChatColor.RED, ChatColor.BOLD));
-                }
-                // Set navy
-                else{
-                    EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
-                    player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyRoomLocation());
-                    
+                        "[%s%s%s]%s You will be the %sAssassin.", 
+                        ChatColor.YELLOW, player.getBukkitPlayer().getName(), ChatColor.RESET, ChatColor.RED, ChatColor.BOLD));
+                    player.getBukkitPlayer().sendMessage(String.format(
+                            "[%s%s%s]%s MISSION: Assassinate the %s%s5%s%s victims.",
+                            ChatColor.YELLOW, player.getBukkitPlayer().getName(), ChatColor.RESET, 
+                            ChatColor.RED, ChatColor.YELLOW, ChatColor.BOLD, ChatColor.RESET, ChatColor.RED));
+                    player.getBukkitPlayer().sendMessage(String.format(
+                            "[%s%s%s] %s%sWatch out!%s %sthey have %s%s5%s%s navys watching them!",
+                            ChatColor.YELLOW, player.getBukkitPlayer().getName(), ChatColor.RESET, 
+                            ChatColor.GOLD, ChatColor.BOLD, ChatColor.RESET, ChatColor.RED, ChatColor.YELLOW, ChatColor.BOLD, ChatColor.RESET, ChatColor.RED));
+                } else {
+                    //player is navy
+                    player.getBukkitPlayer().teleport(this.world.getNavyRoomLocation());
                      // Message
                     player.getBukkitPlayer().sendMessage(String.format(
-                        "%sChoose one Royal Navy character to begin.", ChatColor.BLUE));
+                        "[%s%s%s]%s %sChoose%s%s one Royal Navy character.", ChatColor.YELLOW, player.getBukkitPlayer().getName(), 
+                        ChatColor.RESET, ChatColor.RED, ChatColor.BOLD, ChatColor.RESET, ChatColor.RED));
+                    navys.add(player);
                 }
-                
-                // Setup player scoreboard
-                this.acScoreboard.assignCharacterTeam(player);
-                player.getBukkitPlayer().setScoreboard(this.acScoreboard.getScoreboard());
             }
+            
+            
+            //teleport spectators to the match pre-lobby room
+            for (ACPlayer spectator : this.spectators.values()) {
+                spectator.getBukkitPlayer().setGameMode(GameMode.SURVIVAL);
+                spectator.getBukkitPlayer().teleport(this.world.getNavyRoomLocation());
+            }
+            this.broadcastMessage(String.format("%sMatch will begin in %s%s%s seconds", ChatColor.DARK_GRAY, ChatColor.RED, this.readyCountdown,
+                    ChatColor.DARK_GRAY));
+            this.broadcastMessageToSpectators(String.format("%sMatch will begin in %s%s%s seconds", ChatColor.DARK_GRAY, ChatColor.RED, this.readyCountdown,
+                    ChatColor.DARK_GRAY));
+            // Setup assassin scoreboard lives
+            //ACMatch.this.acScoreboard.setAssassinLives(assassin.getLives());
+            // non-critical scoreboard code, put it inside a task so if it fails, it
+            // won't stop critical code.
+            Bukkit.getScheduler().runTask(plugin, new Runnable() {
+                @Override
+                public void run() {
+                    // set up scoreboard for the assassin and navys
+                    ACMatch.this.acScoreboard.assignCharacterNavyTeam(navys);
+                    ACMatch.this.acScoreboard.assignAssassinTeam(assassin);
+                }
+            });
         }
         
         // Load npc.
         NPCEnum npc;
         Location location;
-        this.npcs = NPCEnum.values().length;
+        int length = NPCEnum.values().length;
 
-        for (int i = 0; i < this.npcs; i++) {
-
+        for (int i = 0; i < length; i++) {
             npc = NPCEnum.values()[i];
-            location = ((ACWorld)this.world).getNPCLocation(npc);
-            
+            location = this.world.getNPCLocation(npc);
             // Spawn npc
-            ACCharacter.zombie(this.plugin, (Zombie) location.getWorld().spawnEntity(location, EntityType.ZOMBIE), npc);
+            Zombie zombie = (Zombie) this.world.getWorld().spawnEntity(location, EntityType.ZOMBIE);
+            this.npcs.add(zombie);
+            ACCharacter.zombie(this.plugin, zombie, npc);
         }
+        //FIXME: livestreaming is in 2 hours, keep zombies in same place of a better way
+        this.keepZombiesInplaceTask = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
+            @Override
+            public void run() {
+                for(Zombie zombie : ACMatch.this.npcs){
+                    NPCEnum npcEnum = NPCEnum.getNPCEnumByString(ChatColor.stripColor(zombie.getCustomName()));
+                    if(npcEnum != null && zombie.isValid()){
+                        zombie.teleport(ACMatch.this.world.getNPCLocation(npcEnum));
+                        //Bukkit.getLogger().severe(String.format("Zombie %s was teleported to: %s", npcEnum.name(), ACMatch.this.world.getNPCLocation(npcEnum)));
+                    } else {
+                        ACMatch.this.npcs.remove(zombie);
+                    }
+                }
+            }
+        },1, 20);
         
-        // Set match scoreboard
-        this.acScoreboard.setNavy(this.players.size() - 1);
-        this.acScoreboard.setNPCs(this.npcs);
-        this.acScoreboard.setPrisioners(0);
-                    
-        // Set match status
-        this.status = MatchStatusEnum.READY;
+        // Start game timer.
+        this.timeLeft(this.readyCountdown);
     }
     
     /**
@@ -200,153 +438,292 @@ public class ACMatch {
      * @author kvnamo
      */
     public void start(){
-        
+        this.status = MatchStatusEnum.RUNNING;
+        this.timeLeft(this.time);
         // Start timer
         synchronized(this.players){
             for(ACPlayer player : this.players.values()){
-                
+                EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
                 // Get assassin
                 if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-                    
-                    //Match timer
-                    if(this.timerTask != null) this.timerTask.cancel();
-                    
-                    this.timerTask = new MatchTimerTask(this.plugin, this.random);
-                    this.timerTask.setMatch(this);
-                    this.timerTask.setPlayer(player.getBukkitPlayer());
-                    this.timerTask.setCountdown(this.time);
-                    this.timerTask.runTaskTimer(this.plugin, 10, 20l);
-
-                    // Set match status
-                    this.status = MatchStatusEnum.RUNNING;
-                    
+                    ACCharacter.assassin(player);
+                    player.getBukkitPlayer().teleport(this.world.getAssassinSpawn());
                     // Announcements
-                    this.broadcastMessage(String.format("%sMatch started!", ChatColor.RED));
-                    
-                    return;
+                    player.getBukkitPlayer().sendMessage(
+                            String.format("%sYou are a %sAssassin, go to kill all the %s%s5%s %sobjetives!", ChatColor.DARK_GRAY, ChatColor.RED, 
+                                    ChatColor.YELLOW, ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_GRAY));
+                } else {
+                    this.setupNavyType(player);
+                    player.getBukkitPlayer().teleport(this.world.getNavyRandomSpawn());
+                    player.getBukkitPlayer().sendMessage(
+                            String.format("%sYou are a %s%sNavy%s [%s%s%s%s]", ChatColor.RED, ChatColor.BLUE, ChatColor.BOLD,
+                                    ChatColor.RESET, ChatColor.YELLOW, ChatColor.BOLD, player.getCharacter().name(), ChatColor.RESET));
+                    player.getBukkitPlayer().sendMessage(String.format("%s%sMISSION%s%s: protect all the %s%s5%s%s victims and kill the assassin!", 
+                            ChatColor.YELLOW, ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_GRAY, ChatColor.YELLOW, ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_GRAY));
                 }
             }
-        }
-    }
-    
-    /**
-     * Finish match
-     * @author kvnamo
-     */
-    public void finish(){
-
-        this.updateWinnersAndLoosers();
-
-        // Start finish match timer.
-        Bukkit.getScheduler().runTaskLater(this.plugin, new Runnable() {
             
-            @Override
-            public void run() {
-                // Get game
-                ACGame game = ACMatch.this.plugin.getGame();
-
-                synchronized(ACMatch.this.players){
-                    
-                    for(ACPlayer player : ACMatch.this.players.values()){
-                        // Setup scoreboard
-                        game.getACScoreboard().assignPlayerTeam(player);
-                        
-                        // Teleport to lobby and load defaults
-                        player.getBukkitPlayer().setScoreboard(game.getACScoreboard().getScoreboard());
-                        player.getBukkitPlayer().teleport(game.getLobbyLocation());
-                        player.loadLobbyInventory(ACMatch.this.plugin);
-                    }
-                }
-                
-                // Announce match winners in lobby
-                ACMatch.this.plugin.getGame().broadcastMessage(String.format("%sThanks for playing! The %s wins!", 
-                    ACMatch.this.npcs == 0 ? ChatColor.RED : ChatColor.BLUE, ACMatch.this.npcs == 0 ? "Assassin" : "Navy"));
-                
-                // Clear all
-                ACMatch.this.players.clear();
-                ACMatch.this.prisioners.clear();
-                ACMatch.this.timerTask.cancel();
-                ACMatch.this.acScoreboard.init();
-                
-                // Set match status
-                ACMatch.this.status = MatchStatusEnum.STOPPED;
-                
-                //Clean the world and delete all old entities
-                List<Entity> entities = ACMatch.this.world.getWorld().getEntities();
-                for(Entity entity : entities){
-                    if(entity instanceof Player) continue;
-                    entity.remove();
-                }
-                
-                // Preinit match if
-                game.preInitNextMatch();
-            }
-        }, 150L);
-        
-        // Announce finish
-        this.broadcastMessage(String.format("%sMatch finished!", ChatColor.RED));
-    }
-
-    /**
-     * Update winners and loosers when the match finish
-     * @author Kvnamo
-     */
-    private void updateWinnersAndLoosers(){
-        
-        synchronized(this.players){
-            for(ACPlayer player : this.players.values()){
-                
-                // Get winner and save in Database
-                if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-                    
-                    // Set a win if the assassin killed every target
-                    if(player.getLives() > 0 && this.npcs == 0){
-                        // Update Butter Coins in central DB
-                        this.addButterCoins(player.getBukkitPlayer(), 5);
-                        player.getPlayerModel().setWins(player.getPlayerModel().getWins() + 1);
-                    }
-                    else player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
-                }
-                else if(this.npcs > 0){
-                    
-                    // Update Butter Coins in central DB
-                    this.addButterCoins(player.getBukkitPlayer(), 5);
-                    player.getPlayerModel().setWins(player.getPlayerModel().getWins() + 1);
-                }
-                else player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
-
-                
-                // Update player in database
-                player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + (this.time - this.countdown));
-                this.updatePlayer(player);
-                
-                // Clear player
-                EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
-                
-                player.setLives(0);
-                player.setCooling(false);
-                player.setCharacter(null);
-                player.setCurrentMatch(null);
+            //teleport spectators to the match world
+            for (ACPlayer spectator : this.spectators.values()) {
+                spectator.getBukkitPlayer().setGameMode(GameMode.SURVIVAL);
+                spectator.getBukkitPlayer().teleport(this.world.getNavyRoomLocation());
             }
         }
     }
     
-    /**
-     * On player quit
-     * @param playerName
-     * @author Kvnamo
-     */
-    public void playerQuit(final ACPlayer player) {
+    private void setupNavyType(ACPlayer navy) {
+
+        if (navy.getCharacter() == null) {
+            int selected;
+            CharacterEnum[] types;
+            selected = (int) Math.round((Math.random() * (CharacterEnum.navyValues().size() - 1)));
+            types = CharacterEnum.navyValues().toArray(new CharacterEnum[CharacterEnum.navyValues().size()]);
+
+            CharacterEnum type = types[selected];
+            navy.setCharacter(type);
+        }
         
-        // Remove from players list
-        this.players.remove(player.getBukkitPlayer().getName());
+        switch (navy.getCharacter()) {
+        case BODYGUARD:
+            ACCharacter.bodyguard(navy);
+            break;
+        case MUSKETEER:
+            ACCharacter.musketeer(navy);
+            break;
+        case SWORDSMAN:
+            ACCharacter.swordsman(navy);
+            break;
+        default:
+            break;
+        }
+    }
+    
+    public void verifyGameover(){
+        
+        synchronized (this.players) {
+            ACPlayer assassin = this.getAssassin();
+            if((this.timeLeft <= 0) || assassin == null || (assassin != null && assassin.getLives() <= 0)){
+                //navy team win
+                this.timeLeft(10);
+                this.timerTask.setCountdown(this.timeLeft);
+                this.status = MatchStatusEnum.STOPPED;
+                if(this.keepZombiesInplaceTask != null){
+                    this.keepZombiesInplaceTask.cancel();
+                }
+                String winners = null, winnerName = null;
+                for (ACPlayer navy : this.players.values()) {
+                    if(!CharacterEnum.ASSASSIN.equals(navy.getCharacter())){
+                        winnerName = this.savePlayerWinner(navy, 3);
+                        // Get winners
+                        winners = StringUtils.isBlank(winners) ? winnerName : winners + ", " + winnerName;
+                    } else {
+                        if ((this.timeLeft <= 0))
+                            navy.getBukkitPlayer().sendMessage(String.format("%sTime is out, You Lost the game!", ChatColor.RED));
+                        else
+                            navy.getBukkitPlayer().sendMessage(String.format("%sYou Lost the game!", ChatColor.RED));
+                    }
+                }
+                this.broadcastMessage(String.format("%sThanks for playing! Winners: %s%s%s", ChatColor.RED, ChatColor.BOLD, ChatColor.YELLOW,
+                        winners == null ? "None" : winners));
+            } else {
+                if(this.getNPCValid() <= 0){
+                    //assassin win
+                    this.timeLeft(10);
+                    this.timerTask.setCountdown(this.timeLeft);
+                    this.status = MatchStatusEnum.STOPPED;
+                    if(assassin != null){
+                        this.savePlayerWinner(assassin, 3);
+                        assassin.getBukkitPlayer().sendMessage(String.format("%sThanks for playing: %s%s%s, %s%sYou are the Winner!!!", ChatColor.RED, 
+                                ChatColor.YELLOW, ChatColor.BOLD, assassin.getBukkitPlayer().getName(), ChatColor.RESET, ChatColor.RED));
+                        this.broadcastMessageToNavys(String.format("%sThanks for playing, %sAssassin%s[%s%s%s%s] %sis the Winner!!!", ChatColor.DARK_GRAY, 
+                                ChatColor.RED, ChatColor.RESET, ChatColor.YELLOW, ChatColor.BOLD, assassin.getBukkitPlayer().getName(), ChatColor.RESET, ChatColor.DARK_GRAY));
+                    }
+                }
+            }
+        }
+    }
+    
+    private String savePlayerWinner(ACPlayer player, int butterCoins) {
+        String winner = null;
+        
+        // Update Butter coins
+        this.addButterCoins(player.getBukkitPlayer(), 5);
         
         // Save player stats
-        player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
-        player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.countdown);
+        //FIXME CODIGO ASINCRONO PARA ESTE GETTER
+        PlayerModel model = player.getPlayerModel();
+        model.setWins(model.getWins() + 1);
+        model.setTimePlayed(model.getTimePlayed() + this.time - this.timeLeft);
         this.updatePlayer(player);
+        // Get winner name
+        winner = StringUtils.isBlank(winner) ? player.getBukkitPlayer().getName() : winner + ", " + player.getBukkitPlayer().getName();
+
+        // Throw fireworks for winner
+        new FireworksTask(player.getBukkitPlayer(), 10).runTaskTimer(this.plugin, 1l, 20l);
+
+        return winner;
+    }
+    
+     private ACPlayer getAssassin(){
+         for(ACPlayer player : this.players.values()){
+             if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                 return player;
+             }
+         }
+         return null;
+     }
+    
+    public void finish(boolean returnToLobby){
+
+        synchronized (this.players) {
+            
+            // Send players and spectators to the main lobby or game lobby
+            for (ACPlayer player : this.players.values()) {
+                if (returnToLobby) {
+                    EngineUtils.disconnect(player.getBukkitPlayer().getPlayer(), LOBBY, null);
+                } else {
+                    EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+                    player.setCharacter(null);
+                    //player.setCurrentMatchName(null);
+                    player.setCooling(false);
+                    player.setInJail(false);
+                    player.getBukkitPlayer().setLevel(0);
+                    player.getBukkitPlayer().setExp(0);
+                    this.acScoreboard.unassignTeam(player);
+                }
+            }
+            
+            for(ACPlayer player : this.spectators.values()){
+                this.setPlayerRulesToSpectator(player);
+            }
+            //Send players and spectators to the GB lobby
+            final Collection<ACPlayer> tempPlayers = new ArrayList<ACPlayer >(this.players.values());
+            final Collection<ACPlayer> tempSpectators =  new ArrayList<ACPlayer >(this.spectators.values());
+            
+            this.players.clear();
+            this.spectators.clear();
+            for(Entity npcs : this.npcs){
+                npcs.remove();
+            }
+            this.npcs.clear();
+            this.status = MatchStatusEnum.STOPPED;
+            this.timeLeft = this.time;
+            this.timerTask = null;
+            if(this.keepZombiesInplaceTask != null){
+                this.keepZombiesInplaceTask.cancel();
+            }
+            // Initialize scoreboard
+            this.acScoreboard = new ACScoreboard(this.plugin);
+            
+            //clean the world and delete all old entities
+            this.world.clear();
+            
+            Bukkit.getScheduler().runTask(plugin, new Runnable() {
+                @Override
+                public void run() {
+                    //send players and spectators to lobby after the match object is stopped and ready for a new match
+                    for(ACPlayer lobbyPlayer : tempPlayers) {
+                        if (lobbyPlayer.getBukkitPlayer().isValid()) {
+                            // optional code
+                            plugin.getGame().getACScoreboard().assignPlayerTeam(lobbyPlayer);
+                            lobbyPlayer.getBukkitPlayer().setScoreboard(plugin.getGame().getACScoreboard().getScoreboard());
+                            plugin.getGame().playerJoin(lobbyPlayer.getBukkitPlayer());
+                        }
+                    }
+                    
+                    for(ACPlayer spectator : tempSpectators) {
+                        if (spectator.getBukkitPlayer().isValid()) {
+                            // optional code
+                            plugin.getGame().getACScoreboard().assignPlayerTeam(spectator);
+                            spectator.getBukkitPlayer().setScoreboard(plugin.getGame().getACScoreboard().getScoreboard());
+                            plugin.getGame().playerJoin(spectator.getBukkitPlayer());
+                        }
+                    }
+                    if(ServerStatusEnum.FULL.equals(plugin.getGame().getServerStatus())){
+                        plugin.getGame().setNextMatch();
+                    }
+                }
+            });
+        }
+    }
+    
+    public synchronized void playerQuit(final ACPlayer player) {
         
-        if(CharacterEnum.ASSASSIN.equals(player.getCharacter()) || this.players.size() == 1) this.finish();
+        //show hidden players to player that quit
+        for(ACPlayer playerToShow : this.spectators.values()){
+            player.getBukkitPlayer().showPlayer(playerToShow.getBukkitPlayer());
+        }
+        
+        //if player is spectator just remove and return, dont do anything else
+        if (this.spectators.containsKey(player.getBukkitPlayer().getName())){
+            this.spectators.remove(player.getBukkitPlayer().getName());
+            this.setPlayerRulesToSpectator(player);
+            return;
+        }
+        
+        switch (this.status) {
+        case STARTING_MATCH:
+            this.players.remove(player.getBukkitPlayer().getName());
+            // Check if starting players number is reached
+            int playersRemaining = this.requiredPlayersToMatch - this.players.size();
+            if (playersRemaining >= 0) {
+                // Cancel begin timer task
+                if (this.timerTask != null) {
+                    this.timerTask.cancel();
+                }
+
+                // Update server status
+                this.status = MatchStatusEnum.STOPPED;
+                final Collection<ACPlayer> players = this.players.values();
+                //optional code in tasks in order to avoid some problem in main thread
+                Bukkit.getScheduler().runTask(plugin, new Runnable() {
+                    ACPlayer acPlayer = player;
+                    @Override
+                    public void run() {
+                        for (ACPlayer playerMatch : players) {
+                            EngineUtils.clearBukkitPlayer(playerMatch.getBukkitPlayer());
+                            playerMatch.setCharacter(null);
+                            //playerMatch.setCurrentMatchName(null);
+                            ACMatch.this.plugin.getGame().getPlayers().put(playerMatch.getBukkitPlayer().getName(), playerMatch);
+                            
+                            // Update scoreboard of the game
+                            ACMatch.this.acScoreboard.unassignTeam(playerMatch);
+                            playerMatch.getBukkitPlayer().setScoreboard(plugin.getGame().getACScoreboard().getScoreboard());
+                            ACMatch.this.plugin.getGame().getACScoreboard().assignPlayerTeam(playerMatch);
+                            ACMatch.this.plugin.getGame().loadLobbyInventory(acPlayer);
+                            ACMatch.this.plugin.getGame().getGhostManager().setGhost(acPlayer.getBukkitPlayer(), true);
+                        }
+                     }
+                 });
+                this.broadcastMessage(String.format("%s%s%s quit the game%s, Match was cancelled", ChatColor.YELLOW, player.getBukkitPlayer().getName(), ChatColor.RED, ChatColor.DARK_GRAY));
+                this.finish(false);
+            }
+            break;
+        case READY_TO_START:
+        case RUNNING:
+            // Remove from players list
+            this.players.remove(player.getBukkitPlayer().getName());
+            EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+            player.setCharacter(null);
+            //player.setCurrentMatchName(null);
+            player.setInJail(false);
+            player.setCooling(false);
+            player.getBukkitPlayer().setLevel(1);
+            player.getBukkitPlayer().setExp(0);
+            
+            // Save player stats
+            player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
+            player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
+            this.updatePlayer(player);
+            
+            this.verifyGameover();
+            break;
+        case STOPPED:
+            break;
+        default:
+            break;
+
+        }
     }
     
     /**
@@ -355,63 +732,85 @@ public class ACMatch {
      * @param event
      * @author kvnamo
      */
-    public void playerDeath(final EntityDeathEvent event, final ACPlayer player) {
+    public void entityDeath(final EntityDeathEvent event, ACPlayer killer) {
         
-        player.setLives(player.getLives() - 1);
-        
-        // If the assassin died
-        if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-            
-            if(player.getLives() > 0){
-                // Update scoreboard
-                this.acScoreboard.setAssassinLives(player.getLives());
+        switch(this.status){
+        case READY_TO_START:
+            break;
+        case RUNNING:
+            if(event.getEntity() instanceof Zombie){
+                if(killer != null){
+                    if(CharacterEnum.ASSASSIN.equals(killer.getCharacter())) {
+                        event.setDroppedExp(0);
+                        event.getDrops().clear();
+                        Zombie zombie = (Zombie)event.getEntity();
+                        this.npcs.remove(zombie);
+                        // Gains 2 levels when killing a player
+                        killer.getBukkitPlayer().setLevel(killer.getBukkitPlayer().getLevel() + 2);
+                        killer.getBukkitPlayer().sendMessage(String.format("[%s%s%s]%s%sCongratulations!%s %sYou have %skilled %san objective", 
+                                ChatColor.YELLOW, killer.getBukkitPlayer().getName(), ChatColor.RESET, ChatColor.GOLD, ChatColor.BOLD, 
+                                ChatColor.RESET, ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY));
+                        //Update scoreboard
+                        //this.acScoreboard.setNPCs(this.npcs.size());
+                        if(this.npcs.size() > 0){
+                            // Add 30 seconds to match
+                            this.timeLeft(this.timeLeft + 30);
+                            // add time for kill npc to timer task
+                            this.timerTask.setCountdown(this.timeLeft);
+                            // Announce npc kill
+                            this.broadcastMessage(String.format("%sTown Crier: %s is dead! %s 30 seconds added to the match!", 
+                                    ChatColor.RED, zombie.getCustomName(), ChatColor.YELLOW));
+                            killer.getBukkitPlayer().sendMessage(String.format("%sThere is still %s%s%s targets alive! go for them!", ChatColor.DARK_GRAY, 
+                                    ChatColor.AQUA, this.npcs.size(), ChatColor.DARK_GRAY));
+                            killer.getBukkitPlayer().sendMessage(String.format("%sUse the %sPlace finder%s[%sCompass%s] to locate the next one!", ChatColor.DARK_GRAY, 
+                                    ChatColor.GREEN, ChatColor.DARK_GRAY, ChatColor.YELLOW, ChatColor.DARK_GRAY));
+                            // Gains 2 levels when killing a player
+                            killer.getBukkitPlayer().setLevel(killer.getBukkitPlayer().getLevel() + 3);
+                        }
+                        // Update butter coins
+                        this.addButterCoins(killer.getBukkitPlayer(), 1);
+                    } else {
+                        Bukkit.getLogger().severe(String.format("WRONG STATUS: A target was dead fore some weird reason: %s", event));
+                    }
+                } else {
+                    Bukkit.getLogger().severe(String.format("WRONG STATUS: A target was dead fore some weird reason: %s", event));
+                }
             }
-            else this.finish();  
-        }
+            this.verifyGameover();
+            break;
+        case STARTING_MATCH:
+            break;
+        case STOPPED:
+            break;
+        default:
+            break;
         
-        // if it was a kill
-        if(event.getEntity().getKiller() instanceof Player){
-            
-            ACPlayer killer = this.players.get(event.getEntity().getKiller().getName());
-            
-            if(CharacterEnum.ASSASSIN.equals(killer.getCharacter())){
-                // Gains 2 levels when killing a player
-                killer.getBukkitPlayer().setExp(killer.getBukkitPlayer().getExp() + 2);
-                
-                // Announce navy kill
-                this.broadcastMessage(String.format("%sTown Crier: %s%s %sfrom Navy was sent to prision!", 
-                    ChatColor.RED, ChatColor.BLUE, player.getBukkitPlayer().getName(), ChatColor.RED));
-            }
-            
-            // Update butter coins
-            this.addButterCoins(killer.getBukkitPlayer(), 1);
         }
     }
     
-    /**
-     *  On npc death
-     * @param event
-     * @param zombie
-     * @author Kvnamo
-     */
-    public void npcDeath(final EntityDeathEvent event, final Zombie zombie, final ACPlayer killer){
+    public synchronized void playerDeath(PlayerDeathEvent event, ACPlayer death){
+        event.setDeathMessage(null);
+        switch(this.status){
+        case READY_TO_START:
+            break;
+        case RUNNING:
+            death.getBukkitPlayer().setLevel(1);
+            if(CharacterEnum.ASSASSIN.equals(death.getCharacter())){
+                death.setLives(death.getLives() - 1);
+                //this.acScoreboard.setAssassinLives(death.getLives());
+                // Gains 2 levels when killing a player
+                death.getBukkitPlayer().setLevel(death.getBukkitPlayer().getLevel() + 2);
+                this.verifyGameover();
+            }
+            break;
+        case STARTING_MATCH:
+            break;
+        case STOPPED:
+            break;
+        default:
+            break;
         
-        // Update scoreboard
-        this.acScoreboard.setNPCs(this.npcs--);
-      
-        // If all targets were killed, finish the match.
-        if(this.npcs > 0){
-            // Add 30 seconds to match
-            this.timeLeft(this.countdown + 30);
-            
-            // Gains 2 levels when killing a player
-            killer.getBukkitPlayer().setExp(killer.getBukkitPlayer().getExp() + 3);
-            
-            // Announce npc kill
-            this.broadcastMessage(String.format("%sTown Crier: %s is death! %s 30 seconds added to the match!", 
-                ChatColor.RED, zombie.getCustomName(), ChatColor.YELLOW));
         }
-        else this.finish();
     }
     
     /**
@@ -421,92 +820,271 @@ public class ACMatch {
      */
     public void playerRespawn(final PlayerRespawnEvent event, final ACPlayer player){
         
-        if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-            int lives = player.getLives();
-            ACCharacter.assassin(this.plugin, player);
-            player.setLives(lives);
-            event.setRespawnLocation(((ACWorld)this.world).getAssassinLocation());
-            
-            // Start invisibility.
-            this.makeInvisible(player, 0);
-            return;
+        switch(this.status){
+        case READY_TO_START:
+            event.setRespawnLocation(this.world.getNavyRoomLocation());
+            break;
+        case RUNNING:
+            if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                event.setRespawnLocation(this.world.getNavyRandomSpawn());
+                player.setCooling(false);
+                // Start invisibility.
+                ACCharacter.assassin(player);
+                player.getBukkitPlayer().setItemInHand(null);
+                player.getBukkitPlayer().getInventory().setArmorContents(null);
+                player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 10 * 20, 1)); 
+                player.getBukkitPlayer().sendMessage(String.format("%sYou are invisible for the next %s10%s seconds.", 
+                        ChatColor.DARK_GRAY, ChatColor.AQUA, ChatColor.DARK_GRAY));
+                broadcastMessageToNavys(String.format("%sWatch out: %sAssassin %sis invisible for the next %s10%s seconds!", 
+                        ChatColor.GOLD, ChatColor.RED, ChatColor.DARK_GRAY, ChatColor.AQUA, ChatColor.DARK_GRAY));
+                //put the armor when invisibility has gone
+                Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+                    @Override
+                    public void run() {
+                        player.getBukkitPlayer().getInventory().setArmorContents(ACInventory.getAssassinArmor());
+                        EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+                        player.getBukkitPlayer().getInventory().addItem(ACInventory.getInvisibleEmerald());
+                        player.getBukkitPlayer().getInventory().addItem(ACInventory.getSmokeBomb());
+                        player.getBukkitPlayer().getInventory().setArmorContents(ACInventory.getAssassinArmor());
+                    }
+                }, 10 * 20);
+                return;
+            } else {
+                event.setRespawnLocation(this.world.getKillBoxLocation());
+                this.sendToJailNavy(player);
+                CharacterEnum character = player.getCharacter();
+                //FIXME set inventory
+            }
+            break;
+        case STARTING_MATCH:
+            event.setRespawnLocation(plugin.getGame().getLobbySpawnLocation());
+            break;
+        case STOPPED:
+            event.setRespawnLocation(plugin.getGame().getLobbySpawnLocation());
+            break;
+        default:
+            event.setRespawnLocation(plugin.getGame().getLobbySpawnLocation());
+            break;
         }
-        
-        // Clear player inventory
-        EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
-        
-        // Add to prision
-        player.setCharacter(null);
-        this.prisioners.add(player);
-        event.setRespawnLocation(((ACWorld)this.world).getKillBoxLocation());
-        
-        // Update scoreboard
-        this.acScoreboard.setPrisioners(this.prisioners.size());
-        this.acScoreboard.setNavy((this.players.size() - 1) - this.prisioners.size());
-        
-        if(this.prisioners.size() == 1){
-            
-            // Every 20 seconds everyone currently in the room gets teleported to the class select room 
-            Bukkit.getScheduler().runTaskLater(this.plugin, new Runnable() {
-                @Override
-                public void run() {
-                    ACMatch.this.releasePrisioners();
-                }
-            }, 20 * 20);
-        }
-    
     }
     
-    /**
-     * On player damaged
-     * @param event
-     * @param player
-     * @author Kvnamo
-     */
-    public void playerDamage(final EntityDamageEvent event, final ACPlayer player) {
+
+    public boolean isUnderThisPotion(ACPlayer acPlayer, PotionEffectType potionType){
+        for(PotionEffect potion : acPlayer.getBukkitPlayer().getActivePotionEffects()){
+            if(potion.getType().equals(potionType)){
+                return true;
+            }
+        }
+        return false;
+    }
+    public void entityDamageByEntityEvent(EntityDamageByEntityEvent event) {
         
-        // Falling will not damage
-        if(DamageCause.FALL.equals(event.getCause())){
+        switch(this.status){
+        case RUNNING:
+            if(event.getEntity() instanceof Player){
+                Player victim = (Player)event.getEntity();
+                ACPlayer acVictim = this.players.get(victim.getName());
+                //victim is the assassin
+                if(CharacterEnum.ASSASSIN.equals(acVictim.getCharacter())){
+                    if(!isUnderThisPotion(acVictim, PotionEffectType.SPEED)){
+                        acVictim.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 10 * 20, 2));
+                        acVictim.getBukkitPlayer().sendMessage(String.format("%sYou have been %shit, %syou can run %s%sfaster!", 
+                                ChatColor.DARK_GRAY, ChatColor.GREEN, ChatColor.DARK_GRAY, ChatColor.GREEN, ChatColor.BOLD));
+                        this.broadcastMessageToNavys(String.format("%sAssassin %sescaped of the trouble by running %s%sfaster!", 
+                                ChatColor.RED, ChatColor.DARK_GRAY, ChatColor.GREEN, ChatColor.BOLD));
+                    }
+                    return;
+                } else {
+                    //victim is a navy
+                    if(event.getDamager() != null){
+                        if(event.getDamager() instanceof Player){
+                            Player bukkitDamager = (Player)event.getDamager();
+                            ACPlayer damager = this.players.get(bukkitDamager.getName());
+                            if(damager != null && CharacterEnum.ASSASSIN.equals(damager.getCharacter())){
+                                if ((acVictim.getBukkitPlayer().getHealth() - event.getDamage()) <= 0) {
+                                    // victim was killed
+                                    this.sendToJailNavy(acVictim);
+                                    event.setCancelled(true);
+                                }
+                            } else {
+                                event.setCancelled(true);
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        case READY_TO_START:
+        case STARTING_MATCH:
+        case STOPPED:
+            event.setCancelled(true);
+            break;
+        default:
+            break;
+        }
+    }
+    
+    public void entityDamagedByDamagerPlayer(EntityDamageByEntityEvent event, ACPlayer damager){
+        //spectators cant damage any entity
+        if(this.spectators.containsKey(damager.getBukkitPlayer().getName())){
             event.setCancelled(true);
             return;
         }
-        else if(DamageCause.VOID.equals(event.getCause())){
-            player.getBukkitPlayer().setHealth(0.0D);
+        
+        switch(this.status){
+        case RUNNING:
+            if(event.getEntity() instanceof Zombie){
+                if(event.getDamager() != null){
+                    if(event.getDamager() instanceof Player){
+                        Player bukkitDamager = (Player)event.getDamager();
+                        ACPlayer acPlayer = this.players.get(bukkitDamager.getName());
+                        if(acPlayer != null && !CharacterEnum.ASSASSIN.equals(acPlayer.getCharacter())){
+                            event.setCancelled(true);
+                        }
+                    }
+                }
+            }
+            break;
+        case READY_TO_START:
+        case STARTING_MATCH:
+        case STOPPED:
             event.setCancelled(true);
-            return;
+            break;
+        default:
+            break;
+        }
+    }
+    
+    public void entityDamagedByOtherEntity(ACPlayer victim, EntityDamageByEntityEvent event) {
+        switch (this.status) {
+        case STARTING_MATCH:
+        case READY_TO_START:
+        case STOPPED:
+            event.setCancelled(true);
+        case RUNNING:
+            if(event.getDamager() instanceof Arrow){
+                
+                Entity arrow = event.getDamager();
+                
+                String ownerTeam = (arrow.hasMetadata("ownerteam")) ? arrow.getMetadata("ownerteam").get(0).asString() : "";
+                
+                //arrow was shooted by enemy
+                if((victim.getCharacter() != null && CharacterEnum.valueOf(ownerTeam) != null) && 
+                        !CharacterEnum.isSameTeam(victim.getCharacter(), CharacterEnum.valueOf(ownerTeam))){
+                    if ((victim.getCharacter() != null) && CharacterEnum.navyValues().contains(victim.getCharacter())) {
+                        if ((victim.getBukkitPlayer().getHealth() - event.getDamage()) <= 0) {
+                            // victim was killed
+                            this.sendToJailNavy(victim);
+                            //arrow was shooted by a assassin to a navy, it kill the navy, cancel the event.
+                            event.setCancelled(true);
+                            return;
+                        }
+                    }
+                    //arrow was shooted for a assassin to a navy, but it does not kill, dont cancel event
+                    //arrow was shooted for a navy to a assassin
+                    event.setCancelled(false);
+                    return;
+                }
+                //arrow was shooted for a same team player
+                event.setCancelled(true);
+                return;
+            }
+        }
+        event.setCancelled(false);
+        return;
+    }
+    
+    private void sendToJailNavy(final ACPlayer prisoner){
+        prisoner.getBukkitPlayer().setHealth(2);
+        prisoner.getBukkitPlayer().teleport(this.world.getKillBoxLocation());
+        prisoner.setInJail(true);
+        this.broadcastMessage(String.format("%s%s%s %s%swas sent to prison, will be free in %s30%s seconds!", 
+                ChatColor.RED, ChatColor.BOLD, prisoner.getBukkitPlayer().getName(),
+                ChatColor.RESET, ChatColor.DARK_GRAY, ChatColor.YELLOW, 
+                ChatColor.DARK_GRAY));
+        // navy will be free in 30 seconds
+        final BukkitTask task = new BukkitRunnable(){
+            int countDown = 30;
+            @Override
+            public void run() {
+                if(countDown <= 0){
+                    ACMatch.this.releasePrisioner(prisoner);
+                    
+                }
+                
+                if((countDown % 5) == 0) {
+                    prisoner.getBukkitPlayer().sendMessage(String.format("%sYou are %sprisoner %snow, you will be free in %s%s %sseconds", 
+                            ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.DARK_GRAY, ChatColor.YELLOW, countDown, ChatColor.DARK_GRAY));
+                }
+                countDown--;
+            }
+        }.runTaskTimer(this.plugin, 1L, 20L);
+        //only way to cancel this task.
+        new BukkitRunnable(){
+            public void run(){
+                task.cancel();
+            }
+        }.runTaskLater(this.plugin, 620);
+    }
+    
+    public void playerShootBow(EntityShootBowEvent event, ACPlayer shootingPlayer){
+        //arrow was shooted by spectator - it must be cancelled
+        if(event.getEntity() instanceof Player){
+            Player player = (Player)event.getEntity();
+            if(player != null && this.spectators.containsKey(player.getName())){
+                event.setCancelled(true);
+            }
+        }
+        //arrow was shooted by player in match
+        Entity arrow = event.getProjectile();
+        if(shootingPlayer.getCharacter() != null){
+            MetadataValue ownerValue = new FixedMetadataValue(plugin, shootingPlayer.getCharacter());
+            arrow.setMetadata("ownerteam", ownerValue);
+        }
+    }
+    
+    
+    private List<ACPlayer> getNavysFree(){
+        List<ACPlayer> navys = new ArrayList<>();
+        for(ACPlayer player : this.players.values()){
+            if(!CharacterEnum.ASSASSIN.equals(player.getCharacter()) && !player.isInJail()){
+                navys.add(player);
+            }
+        }
+        
+        return navys;
+    }
+    
+    private List<ACPlayer> getNavyPrisoners(){
+        List<ACPlayer> prisoners = new ArrayList<>();
+        for(ACPlayer player : this.players.values()){
+            if(!CharacterEnum.ASSASSIN.equals(player.getCharacter()) && player.isInJail()){
+                prisoners.add(player);
+            }
+        }
+        
+        return prisoners;
+    }
+    private void releasePrisioner(ACPlayer prisoner){
+        synchronized (this.players) {
+            prisoner.getBukkitPlayer().teleport(this.world.getNavyRandomSpawn());
+            prisoner.setInJail(false);
+        }
+    }
+    
+    private void setPlayerRulesToSpectator(ACPlayer player){
+        player.getBukkitPlayer().setAllowFlight(false);
+        EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+        this.showPlayer(player.getBukkitPlayer());
+    }
+    
+    private void showPlayer(Player bukkitPlayer) {
+        for (ACPlayer player : this.players.values()) {
+            player.getBukkitPlayer().showPlayer(bukkitPlayer);
         }
 
-        // The assassin can get damaged by anyone
-        if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-            if((int)player.getBukkitPlayer().getHealth() % 2 == 0){
-                player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 5 * 20, 2));
-            }
-            return;
-        }
-        
-        if(event instanceof EntityDamageByEntityEvent && ((EntityDamageByEntityEvent) event).getDamager() instanceof Player){
-            // Get enemy
-            final ACPlayer enemy = this.players.get(((Player)((EntityDamageByEntityEvent) event).getDamager()).getName());
-            
-            // The assassin can damaged anyone
-            if(CharacterEnum.ASSASSIN.equals(enemy.getCharacter())) return;
-        }
-        
-        event.setCancelled(true);
-    }
-    
-    /**
-     * Release prisioners from jail
-     * @author Kvnamo
-     */
-    private void releasePrisioners(){
-        
-        synchronized (this.prisioners) {    
-            for(ACPlayer player : this.prisioners){
-                player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyRoomLocation());
-            }
-            
-            this.prisioners.clear();
+        for (ACPlayer player : this.spectators.values()) {
+            player.getBukkitPlayer().showPlayer(bukkitPlayer);
         }
     }
     
@@ -516,85 +1094,190 @@ public class ACMatch {
      * @param event
      * @author kvnamo
      */
-    public void playerMove(final PlayerMoveEvent event, final ACPlayer player) {
+    public void playerMove(final PlayerMoveEvent event, ACPlayer player) {
         
         final Block block = event.getTo().getBlock();
         
-        if(MatchStatusEnum.RUNNING.equals(this.status) && CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-            
-            // Pressure plates on diamond blocks throughout the map give the assassin 1 level of experience
-            if(Material.DIAMOND_BLOCK.equals(block.getType())){
-                player.getBukkitPlayer().setExp(player.getBukkitPlayer().getExp() + 1);
-                block.setType(Material.SAND);
+        switch (this.status) {
+        case READY_TO_START:
+            if(!CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                Location location = player.getBukkitPlayer().getLocation().getBlock().getLocation();
+                if(this.world.getBodyguardLocation().equals(location) && (player.getCharacter() == null || !CharacterEnum.BODYGUARD.equals(player.getCharacter()))){
+                    player.setCharacter(CharacterEnum.BODYGUARD);
+                    player.getBukkitPlayer().sendMessage(
+                            String.format("%sYou have Selected the %sNavy%s skill: %s%s", ChatColor.DARK_GRAY, ChatColor.BLUE, 
+                                    ChatColor.DARK_GRAY, ChatColor.RED, CharacterEnum.BODYGUARD.getName()));
+                    player.getBukkitPlayer().sendMessage(
+                            String.format("%s%s%s: Strong attack, Slow moving, Absortion effect", ChatColor.GREEN, CharacterEnum.BODYGUARD.getName(),
+                                    ChatColor.DARK_GRAY));
+                }
+                if(this.world.getMusketeerLocation().equals(location) && (player.getCharacter() == null || !CharacterEnum.MUSKETEER.equals(player.getCharacter()))){
+                    player.setCharacter(CharacterEnum.MUSKETEER);
+                    player.getBukkitPlayer().sendMessage(
+                            String.format("%sYou have Selected the %sNavy%s skill: %s%s", ChatColor.DARK_GRAY, ChatColor.BLUE, 
+                                    ChatColor.DARK_GRAY, ChatColor.RED, CharacterEnum.MUSKETEER.getName()));
+                    player.getBukkitPlayer().sendMessage(
+                            String.format("%s%s%s: Fast moving, knockback attack, Bow attack", ChatColor.GREEN, CharacterEnum.MUSKETEER.getName(),
+                                    ChatColor.DARK_GRAY));
+                }
+                if(this.world.getSwordsmanLocation().equals(location) && (player.getCharacter() == null || !CharacterEnum.SWORDSMAN.equals(player.getCharacter()))){
+                    player.setCharacter(CharacterEnum.SWORDSMAN);
+                    player.getBukkitPlayer().sendMessage(
+                            String.format("%sYou have Selected the %sNavy%s skill: %s%s", ChatColor.DARK_GRAY, ChatColor.BLUE, 
+                                    ChatColor.DARK_GRAY, ChatColor.RED, CharacterEnum.SWORDSMAN.getName()));
+                    player.getBukkitPlayer().sendMessage(
+                            String.format("%s%s%s: Sword attack, Knockback attack, Absortion effect", ChatColor.GREEN, CharacterEnum.SWORDSMAN.getName(),
+                                    ChatColor.DARK_GRAY));
+                }
             }
-        }
-        else if(player.getCharacter() == null){
-            
-            Location location = player.getBukkitPlayer().getLocation().getBlock().getLocation();
-            
-            if(((ACWorld)this.world).getBodyguardLocation().equals(location)){
-                player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyLocation());
-                player.setCharacter(CharacterEnum.BODYGUARD);
-                ACCharacter.bodyguard(this.plugin, player);
+            break;
+        case RUNNING:
+            if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+             // Pressure plates on diamond blocks throughout the map give the assassin 1 level of experience
+                if(Material.DIAMOND_BLOCK.equals(block.getType())){
+                    player.getBukkitPlayer().setLevel(player.getBukkitPlayer().getLevel() + 1);
+                    block.setType(Material.SAND);
+                    player.getBukkitPlayer().sendMessage(String.format("[%s%s%s]%sYour experience has been %s%sincreased%s%s!!", 
+                            ChatColor.YELLOW, player.getBukkitPlayer().getName(), ChatColor.RESET, ChatColor.DARK_GRAY, 
+                            ChatColor.RED, ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_GRAY));
+                }
             }
-            else if(((ACWorld)this.world).getMusketeerLocation().equals(location)){
-                player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyLocation());
-                player.setCharacter(CharacterEnum.MUSKETEER);
-                ACCharacter.musketeer(this.plugin, player);
-            }
-            else if(((ACWorld)this.world).getSwordsmanLocation().equals(location)){
-                player.getBukkitPlayer().teleport(((ACWorld)this.world).getNavyLocation());
-                player.setCharacter(CharacterEnum.SWORDSMAN);
-                ACCharacter.swordsman(this.plugin, player);
-            }
-        }
-    }
-    
-    /**
-     * Make invisible
-     * @param player
-     * @param cooldown
-     * @author Kvnamo
-     */
-    public void makeInvisible(final ACPlayer player, final int cooldown){
-        
-        if(this.invisivilityTask != null) this.invisivilityTask.cancel();  
-        this.invisivilityTask = new InvisibilityTask();
-        this.invisivilityTask.setPlayer(player);
-        this.invisivilityTask.setCoolingTime(0);
-        this.invisivilityTask.runTaskTimer(plugin, 10, 200l);
-    }
-    
-    /**
-     * Hide player 
-     * @param player
-     * @author kvnamo
-     */
-    public void hidePlayer(Player bukkitPlayer, boolean hide){
-        
-        synchronized(this.players){
-            for (ACPlayer player : this.players.values()) {
-                if(hide) player.getBukkitPlayer().hidePlayer(bukkitPlayer);
-                else player.getBukkitPlayer().showPlayer(bukkitPlayer);
-            }
+            break;
+        case STARTING_MATCH:
+            break;
+        case STOPPED:
+            break;
+        default:
+            break;
         }
     }
     
-    /**
-     * Lobby time left to start a match
-     * @param countdown
-     * @author Kvnamo
-     */
-    public void timeLeft(int countdown) {
+ public void rightClick(PlayerInteractEvent event) {
         
-        this.countdown = countdown;
-        this.acScoreboard.setTimeLeft(countdown);
+        Player bukkitPlayer = event.getPlayer();
+        //dont do anything if player is a spectator, spectators only can use the compass
+        if(bukkitPlayer != null && this.spectators.containsKey(bukkitPlayer.getName())){
+            if (bukkitPlayer.getItemInHand() != null) {
+                if (ACInventory.getLeaveCompass().getType().equals(bukkitPlayer.getItemInHand().getType()))
+                    EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+            }
+            event.setCancelled(true);
+            return;
+        }
         
-        if(this.countdown > 6) return;
-        
+        switch (this.status) {
+        case READY_TO_START:
+            break;
+        case RUNNING:
+            if (bukkitPlayer.getItemInHand() != null) {
+                //use Material.COMPASS because compass has 2 funcionalities in this plugin: InventoryEnum.LEAVE_COMPASS and InventoryEnum.PLACE_FINDER
+                if (Material.COMPASS.equals(bukkitPlayer.getItemInHand().getType())){
+                    
+                }
+            }
+            break;
+        case STARTING_MATCH:
+            if (bukkitPlayer.getItemInHand() != null) {
+                if (Material.COMPASS.equals(bukkitPlayer.getItemInHand().getType())){
+                    EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+                }
+            }
+            break;
+        case STOPPED:
+            break;
+        default:
+            break;
+        }
+    }
+ 
+ /**
+  * When player chats
+  * 
+  * @param player
+  * @author jdgil
+  */
+ public void chatMessage(AsyncPlayerChatEvent event) {
+     final ACPlayer player = this.players.get(event.getPlayer().getName());
+
+     // Spectators are not allowed to send messages.
+     if (player == null) {
+         event.getPlayer().sendMessage(String.format("%sOnly living players can send messages.", ChatColor.GRAY));
+         event.setCancelled(true);
+         return;
+     }
+
+     // Last message.
+     if (StringUtils.isNotBlank(player.getLastMessage()) && player.getLastMessage().equals(event.getMessage().toLowerCase())) {
+         event.getPlayer().sendMessage(String.format("%sPlease don't send the same message multiple times!", ChatColor.GRAY));
+         event.setCancelled(true);
+     }
+
+     event.getRecipients().clear();
+     for(ACPlayer playerToChat : this.players.values()){
+         event.getRecipients().add(playerToChat.getBukkitPlayer());
+     }
+     for(ACPlayer spectatorToChat : this.spectators.values()){
+         event.getRecipients().add(spectatorToChat.getBukkitPlayer());
+     }
+     player.setLastMessage(event.getMessage().toLowerCase());
+     PlayerTagEnum playerTag = PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount());
+     event.setFormat(playerTag.getPrefix() + ChatColor.WHITE + "%s" + ChatColor.GRAY + ": %s");
+ }
+    
+    private void teleportToLobby(Player player, String message){
+        final Player bukkitPlayer = player;
+        final String msg = message;
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                EngineUtils.disconnect(bukkitPlayer, LOBBY, msg);
+            }
+        });
+    }
+    
+    private Zombie findTargetsInMatch(ACPlayer player){
+
+        if(player == null  || player.getCharacter() == null || !CharacterEnum.ASSASSIN.equals(player.getCharacter()))
+            return null;
+
+        Collection<Zombie> targets = new ArrayList<>();
+        for(Zombie target : this.npcs){
+            if(!target.isDead() && target.isValid()){
+                targets.add(target);
+            }
+        }
+        if(targets.size() > 0){
+            Zombie nearestTarget = this.findNearestTarget(player, targets);
+            if(nearestTarget != null) {
+                player.getBukkitPlayer().setCompassTarget(nearestTarget.getLocation().clone());
+            }
+            return nearestTarget;
+        }
+        return null;
+    }
+    
+    private Zombie findNearestTarget(ACPlayer assassin, Collection<Zombie> targets){
+        double lastDistance =  Double.MAX_VALUE;
+        Zombie nearestTarget = null;
+        for(Zombie target : targets){
+            if(target.getWorld().getName().equalsIgnoreCase(assassin.getBukkitPlayer().getWorld().getName())){
+                if(lastDistance > target.getLocation().clone().distanceSquared(assassin.getBukkitPlayer().getLocation().clone())){
+                    lastDistance = target.getLocation().clone().distanceSquared(assassin.getBukkitPlayer().getLocation().clone());
+                    nearestTarget = target;
+                }
+            } else {
+                Bukkit.getLogger().severe(String.format("Match: %s, Player: %s, Opponent: %s, PlayerWorld: %s, OpponentWorld: %s", 
+                        this.getMatchName(), assassin.getBukkitPlayer().getName(), target.getCustomName(), 
+                        assassin.getBukkitPlayer().getWorld().getName(), target.getWorld().getName()));
+            }
+        }
+        return nearestTarget;
+    }
+    
+    public void hidePlayer(Player bukkitPlayer) {
         for (ACPlayer player : this.players.values()) {
-            player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);
-        } 
+            player.getBukkitPlayer().hidePlayer(bukkitPlayer);
+        }
     }
 
     /**
@@ -611,11 +1294,26 @@ public class ACMatch {
     }
     
     /**
-     * Update player model 
-     * @param playerModel
-     * @author Kvnamo
+     * Broadcast message only to spectators
+     * 
+     * @param message
+     * @author jdgil
      */
-    private synchronized void updatePlayer(final ACPlayer player){
+    private void broadcastMessageToSpectators(String message) {
+        for (ACPlayer player : this.spectators.values()) {
+                player.getBukkitPlayer().sendMessage(message);
+        }
+    }
+    
+    private void broadcastMessageToNavys(String message) {
+        for (ACPlayer player : this.players.values()) {
+            if(!CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                player.getBukkitPlayer().sendMessage(message);
+            }
+        }
+    }
+    
+    private void updatePlayer(final ACPlayer player){
         
         // Save stats in database
         Bukkit.getScheduler().runTaskAsynchronously(this.plugin, new Runnable() {
@@ -639,7 +1337,7 @@ public class ACMatch {
             
             @Override
             public void run() {
-                int vipButterCoins = ACMatch.this.plugin.getPersistence().isPlayerStaff(bukkitPlayer) ?
+                int vipButterCoins = ACMatch.this.plugin.getPersistence().isPlayerStaffOrVIP(bukkitPlayer) ?
                     SettingsManager.getInstance().getInt(SettingsEnum.VIP_BUTTERCOIN_MULTIPLIER) * butterCoins :
                     SettingsManager.getInstance().getInt(SettingsEnum.BUTTERCOIN_MULTIPLIER) * butterCoins ;
                 
@@ -649,5 +1347,117 @@ public class ACMatch {
         
         bukkitPlayer.sendMessage(String.format("%s[ButterCoins] %sYou have earned %s ButterCoins!", 
             ChatColor.GOLD, ChatColor.YELLOW, butterCoins));
+    }
+    
+    public void timeLeft(int timeLeft) {
+
+        this.timeLeft = timeLeft;
+        this.acScoreboard.setTimeLeft(timeLeft);
+
+        if (timeLeft > 5)
+            return;
+
+        synchronized (this.players) {
+            for (ACPlayer player : this.players.values()) {
+                // Play sounds
+                if (timeLeft == 0)
+                    player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.LEVEL_UP, 3, -3);
+                else if (timeLeft < 6)
+                    player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);
+            }
+        }
+    }
+    
+    public void updateScoreBoard(){
+        switch(this.status){
+        case READY_TO_START:
+        case RUNNING:
+            this.acScoreboard.setNavy(this.getNavysFree().size());
+            this.acScoreboard.setNPCs(this.getNPCValid());
+            this.acScoreboard.setPrisioners(this.getNavyPrisoners().size());
+            this.acScoreboard.setAssassinLives(this.getAssassin().getLives());
+            break;
+        case STARTING_MATCH:
+            break;
+        case STOPPED:
+            break;
+        default:
+            break;
+        }
+    }
+    
+    private int getNPCValid(){
+        List<Zombie> targets = new ArrayList<>();
+        for(Zombie zombie : this.npcs){
+            if(zombie.isValid()){
+                targets.add(zombie);
+            }
+        }
+        return targets.size();
+    }
+    
+    /**
+     * @return the matchName
+     */
+    public String getMatchName() {
+        return matchName;
+    }
+
+    /**
+     * @param matchName the matchName to set
+     */
+    public void setMatchName(String matchName) {
+        this.matchName = matchName;
+    }
+
+    /**
+     * @return the acScoreboard
+     */
+    public ACScoreboard getAcScoreboard() {
+        return acScoreboard;
+    }
+
+    /**
+     * @param acScoreboard the acScoreboard to set
+     */
+    public void setAcScoreboard(ACScoreboard acScoreboard) {
+        this.acScoreboard = acScoreboard;
+    }
+
+    /**
+     * @return the spectators
+     */
+    public Map<String, ACPlayer> getSpectators() {
+        return spectators;
+    }
+    /**
+     * @param status the status to set
+     */
+    public void setStatus(MatchStatusEnum status) {
+        this.status = status;
+    }
+
+    public int getTimeLeft() {
+        return timeLeft;
+    }
+
+    public void setTimeLeft(int timeLeft) {
+        this.timeLeft = timeLeft;
+    }
+
+    public Map<String, ACPlayer> getPlayers(){
+        return this.players;
+    }    
+
+    public MatchStatusEnum getStatus(){
+        return this.status;
+    }
+
+    public MinecadeWorld getMinecadeWorld(){
+        return this.world;
+    }
+    
+    public void setMinecadeWorld(ACBaseWorld world){
+        this.world = world;
     }
 }

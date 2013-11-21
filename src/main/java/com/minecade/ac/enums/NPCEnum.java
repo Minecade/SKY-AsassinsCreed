@@ -33,4 +33,13 @@ public enum NPCEnum {
     private NPCEnum(ChatColor color){
         this.color = color;
     }
+    
+    public static NPCEnum getNPCEnumByString(String string){
+        for(NPCEnum value : values()){
+            if(value.toString().equalsIgnoreCase(string)){
+                return value;
+            }
+        }
+        return null;
+    }
 }

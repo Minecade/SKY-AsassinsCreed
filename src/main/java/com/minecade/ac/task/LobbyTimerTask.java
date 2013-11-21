@@ -49,11 +49,11 @@ public class LobbyTimerTask extends BukkitRunnable{
     public void run() {
         this.countdown--;
         
-        this.game.timeLeft(this.countdown);
-        
-        if(this.countdown <= 0){
-            this.game.initNextMatch(this.match);
-            super.cancel();
-        }
+//        this.game.timeLeft(this.countdown);
+//        
+//        if(this.countdown <= 0){
+//            this.game.initNextMatch(this.match);
+//            super.cancel();
+//        }
     }
 }

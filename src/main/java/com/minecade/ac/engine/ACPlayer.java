@@ -1,46 +1,49 @@
 package com.minecade.ac.engine;
 
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
+import com.minecade.ac.data.ACPersistence;
 import com.minecade.ac.data.PlayerModel;
 import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
 import com.minecade.engine.data.MinecadeAccount;
-import com.minecade.engine.utils.EngineUtils;
 
 public class ACPlayer{
 
     private Player bukkitPlayer;
+    private PlayerModel playerModel;
+    private MinecadeAccount minecadeAccount;
+    private CharacterEnum character;
+    private int lives;
+    private boolean cooling;
+    private boolean inJail;
+    protected String lastMessage;
+    private String currentMatchName;
+    
+    public ACPlayer (MinecadeAccount account, Player bukkitPlayer){
+        this.bukkitPlayer = bukkitPlayer;
+        this.minecadeAccount = account;
+    }
+    
+    public ACPlayer(){
+        
+    }
 
-    /**
-     * Gets the bukkitPlayer
-     * @return bukkitPlayer
-     * @author kunamo
-     */
     public Player getBukkitPlayer() {
         return bukkitPlayer;
     }
 
-    /**
-     * Sets the bukkitPlayer
-     * @author kunamo
-     */
-    public void setBukkitPlayer(Player bukkitPlayer) {
-        this.bukkitPlayer = bukkitPlayer;
-    }
-
-    private PlayerModel playerModel;
-
-    /**
-     * Gets the playerModel
-     * @return playerModel
-     * @author kunamo
-     */
     public PlayerModel getPlayerModel() {
-        return this.playerModel;
+        if(playerModel == null){
+            playerModel = ((ACPersistence)AssassinsCreedPlugin.getInstance().getPersistence()).getPlayer(bukkitPlayer.getName());
+        }
+        return playerModel;
     }
+    
 
+   public PlayerModel getRefreshPlayerModel() {
+       return playerModel = ((ACPersistence)AssassinsCreedPlugin.getInstance().getPersistence()).getPlayer(bukkitPlayer.getName());
+   }
     /**
      * Sets the playerModel
      * @author kunamo
@@ -48,9 +51,6 @@ public class ACPlayer{
     public void setPlayerModel(PlayerModel playerModel) {
         this.playerModel = playerModel;
     }
-    
-    private MinecadeAccount minecadeAccount;
-
     /**
      * Gets the minecadeAccount
      * @return minecadeAccount
@@ -67,29 +67,6 @@ public class ACPlayer{
     public void setMinecadeAccount(MinecadeAccount minecadeAccount) {
         this.minecadeAccount = minecadeAccount;
     }
-    
-    private ACMatch currentMatch;
-    
-    /**
-     * Get current match
-     * @return currentMatch
-     * @author kvnamo
-     */
-    public ACMatch getCurrentMatch(){
-        return this.currentMatch;
-    }
-    
-    /**
-     * Set current match
-     * @param currentMatch
-     * @author kvnamo
-     */
-    public void setCurrentMatch(ACMatch currentMatch){
-        this.currentMatch = currentMatch;
-    }
-
-    private CharacterEnum character;
-    
     /**
      * Get character
      * @return character
@@ -107,9 +84,6 @@ public class ACPlayer{
     public void setCharacter(CharacterEnum character){
         this.character = character;
     }
-    
-    private int lives;
-
     /**
      * Gets the lives
      * @return lives
@@ -117,38 +91,15 @@ public class ACPlayer{
      */
     public int getLives() {
         return this.lives;
-    } 
-
+    }
     /**
      * Sets the lives
      * @author kunamo
      */
-    public void setLives(int lives) {
-        this.lives = lives;
+    public void setLives(int livesleft) {
+        this.lives = livesleft;
     }
-    
-    private int invisibilityTime;
-    
-    /**
-     * Is invisibility time
-     * @return invisibility time
-     * @author Kvnamo
-     */
-    public int getInvisibilityTime(){
-        return this.invisibilityTime;
-    }
-    
-    /**
-     * Set invisibility time
-     * @param invisibility time
-     * @author Kvnamo
-     */
-    public void setInvisibilityTime(int invisibilityTime){
-        this.invisibilityTime = invisibilityTime;
-    }
-    
-    private boolean cooling;
-    
+
     /**
      * Is cooling
      * @return cooling
@@ -166,9 +117,6 @@ public class ACPlayer{
     public void setCooling(boolean cooling){
         this.cooling = cooling;
     }
-
-    protected String lastMessage;
-
     /**
      * Gets the lastMessage
      * @return lastMessage
@@ -185,22 +133,32 @@ public class ACPlayer{
     public void setLastMessage(String lastMessage) {
         this.lastMessage = lastMessage;
     }
-    
+
     /**
-     * Load player inventory
-     * @author Kvnamo
+     * @return the currentMatchName
      */
-    public void loadLobbyInventory(AssassinsCreedPlugin plugin) {
-        
-        Bukkit.getScheduler().runTask(plugin, new Runnable() {
-            
-            @Override
-            public void run() {
-                EngineUtils.clearBukkitPlayer(ACPlayer.this.bukkitPlayer);
-                ACPlayer.this.bukkitPlayer.getInventory().addItem(ACInventory.getInstructionsBook());
-                ACPlayer.this.bukkitPlayer.getInventory().addItem(ACInventory.getStatsBook(ACPlayer.this));
-                ACPlayer.this.bukkitPlayer.getInventory().addItem(ACInventory.getLeaveCompass());
-            }
-        });
+    public String getCurrentMatchName() {
+        return this.bukkitPlayer.getWorld().getName();
+    }
+
+//    /**
+//     * @param currentMatchName the currentMatchName to set
+//     */
+//    public void setCurrentMatchName(String currentMatchName) {
+//        this.currentMatchName = currentMatchName;
+//    }
+
+    /**
+     * @return the inJail
+     */
+    public boolean isInJail() {
+        return inJail;
+    }
+
+    /**
+     * @param inJail the inJail to set
+     */
+    public void setInJail(boolean inJail) {
+        this.inJail = inJail;
     }
 }

@@ -1,7 +1,9 @@
 package com.minecade.ac.engine;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
@@ -342,18 +344,32 @@ public class ACInventory {
      */
     public static ItemStack getSmokeBomb() {
         
-        ItemStack smokeBomb = new Potion(PotionType.INSTANT_DAMAGE).splash().toItemStack(1);
-        
-        final PotionMeta smokeBombMeta = (PotionMeta) smokeBomb.getItemMeta();
+        ItemStack smokeBomb = new Potion(PotionType.SLOWNESS).splash().toItemStack(1);
+        PotionMeta smokeBombMeta = (PotionMeta) smokeBomb.getItemMeta();
         smokeBombMeta.setDisplayName(ChatColor.DARK_RED + "Smoke Bomb");
-        smokeBombMeta.addCustomEffect(PotionEffectType.BLINDNESS.createEffect(4 * 20, 10), true);
+        smokeBombMeta.addCustomEffect(PotionEffectType.BLINDNESS.createEffect(640, 100), true);
         smokeBombMeta.setLore(Arrays.asList(
-                ChatColor.GRAY + "Blindness (0:08).",
+                ChatColor.GRAY + "Blindness (0:08)",
                 ChatColor.DARK_GRAY + "Restricts the view of the unfortunate targets."));
         
         smokeBomb.setItemMeta(smokeBombMeta);
 
         return smokeBomb;
+    }
+    
+    public static ItemStack getPlaceFinder() {
+        
+        ItemStack compass = new ItemStack(Material.COMPASS, 1);
+        ItemMeta meta = compass.getItemMeta();
+        meta.setDisplayName(String.format("%s%s Place Finder", ChatColor.RESET, ChatColor.GREEN));
+        
+        List<String> colored = new ArrayList<>();
+        colored.add(ChatColor.GRAY + "Click to find nearest target alive");
+        meta.setLore(colored);
+        
+        compass.setItemMeta(meta);
+        return compass;
+
     }
     
     /**

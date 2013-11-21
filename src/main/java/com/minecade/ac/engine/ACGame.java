@@ -1,27 +1,34 @@
 package com.minecade.ac.engine;
 
-import java.util.ArrayList;
+import java.text.DecimalFormat;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.entity.Arrow;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Zombie;
-import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
+import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.entity.EntityTargetEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -30,488 +37,610 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BookMeta;
 
+import com.minecade.engine.MinecadeWorld;
+import com.minecade.engine.data.MinecadeAccount;
+import com.minecade.engine.enums.PlayerTagEnum;
+import com.minecade.engine.utils.EngineUtils;
+import com.minecade.engine.utils.GhostManager;
 import com.minecade.ac.data.PlayerModel;
 import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.enums.MatchStatusEnum;
 import com.minecade.ac.enums.ServerStatusEnum;
 import com.minecade.ac.plugin.AssassinsCreedPlugin;
-import com.minecade.ac.task.LobbyTimerTask;
 import com.minecade.ac.world.ACWorld;
-import com.minecade.engine.data.MinecadeAccount;
-import com.minecade.engine.enums.PlayerTagEnum;
-import com.minecade.engine.utils.EngineUtils;
+import com.minecade.ac.world.ACWorld1;
+import com.minecade.ac.world.ACWorld2;
+import com.minecade.ac.world.ACWorld3;
+import com.minecade.ac.world.ACWorld4;
 
-public class ACGame {
-    
+/**
+ * @author kvnamo
+ */
+public class ACGame{
+
+    /**
+     * Lobby
+     */
     private static final String LOBBY = "lobby1";
 
     private final AssassinsCreedPlugin plugin;
-    
-    private Location lobby;
-
-    private int maxPlayers;
-
-    private int vipPlayers;
-
-    private int matchCountdown; 
-    
-    private List<ACMatch> matches;
-
-    private LobbyTimerTask timerTask;
-
-    private int matchRequiredPlayers;  
 
     private Map<String, ACPlayer> players;
-
-    /**
-     * Get lobby location in game.
-     * @return lobby location
-     * @author Kvnamo
-     */
-    public Location getLobbyLocation(){
-        return lobby;
-    }
-    
+    private Map<String, ACMatch> matches;
+    private Location lobbySpawnLocation;
     private ACScoreboard acScoreboard;
-    
-    /**
-     * return scoreboard
-     * @return scoreboard
-     * @author Kvnamo
-     */
-    public ACScoreboard getACScoreboard(){
-        return this.acScoreboard;
-    }
-    
-    /**
-     * Player to start a next match
-     * @return players needed to start
-     * @author Kvnamo
-     */
-    private int getPlayersToStart(){
-        
-        int playersToStart = this.matchRequiredPlayers;
-        
-        // Send message only to players in lobby
-        for (ACPlayer player : this.players.values()) {
-            
-            // Subtract players to start
-            if(player.getCurrentMatch() == null) playersToStart--;
-            
-            // Check if we can start
-            if(playersToStart == 0) break;
-        }
-        
-        return playersToStart;
-    }
-    
-    /**
-     * Get next match players
-     * @return players
-     * @author Kvnamo
-     */
-    public int getNextMatchPlayers() {
-        
-        for(ACMatch match : this.matches){
-            if(MatchStatusEnum.STOPPED.equals(match.getStatus())){
-                return match.getPlayers().size();
-            }
-        }
-        
-        return 0;
-    }
-    
-    /**
-     * ACGame constructor
-     * @param plugin
-     * @author kvnamo
-     */
-    public ACGame(AssassinsCreedPlugin plugin) {
-        
+    private int requiredPlayersToMatch;
+    private int maxPlayers;
+    private int vipPlayers;
+    private ServerStatusEnum serverStatus;
+    private Set<Class> worlds;
+    private GhostManager ghostManager;
+    private ACMatch currentMatch;
+
+    public ACGame(final AssassinsCreedPlugin plugin) {
+
         this.plugin = plugin;
         
-        // Load properties
+        // Load config properties
         this.maxPlayers = plugin.getConfig().getInt("server.max-players");
-        this.vipPlayers = plugin.getConfig().getInt("server.max-vip-players");
-        this.matchRequiredPlayers = plugin.getConfig().getInt("match.required-players");
+        this.vipPlayers = plugin.getConfig().getInt("server.vip-players");
+        this.requiredPlayersToMatch = plugin.getConfig().getInt("match.required-players");
+
+        this.players = new ConcurrentHashMap<String, ACPlayer>();
+
+        // Initialize scoreboard
+        this.acScoreboard = new ACScoreboard(this.plugin);
+
+        // Initialize ghost manager
+        this.ghostManager = new GhostManager(this.plugin, this.acScoreboard.getScoreboard());
+
+        this.serverStatus = ServerStatusEnum.WAITING_FOR_PLAYERS;
+
+        this.worlds = new HashSet<>();
+        worlds.add(ACWorld.class);
+        worlds.add(ACWorld1.class);
+        worlds.add(ACWorld2.class);
+        worlds.add(ACWorld3.class);
+        worlds.add(ACWorld4.class);
+
+        // maximun number of matchs will be the number of worlds
+        this.matches = new ConcurrentHashMap<String, ACMatch>(this.worlds.size());
         
-        // Register scoreboard
-        this.acScoreboard = new ACScoreboard(this.plugin, true);
-        this.acScoreboard.init();
-        
-        // Initialize properties
-        this.players =  new ConcurrentHashMap<String, ACPlayer>(this.vipPlayers);
+    }
+    
+    public void init(){
+        this.initMatches();
+        this.setNextMatch();
     }
 
     /**
      * Match world initialization
+     * 
      * @param WorldInitEvent
      * @author: kvnamo
      */
-    public void initWorld(WorldInitEvent event){
-        
+    public void initWorld(WorldInitEvent event) {
+
         World world = event.getWorld();
 
         // World can't be empty
-        if (world == null){
-            this.plugin.getServer().getLogger().severe("initWorld: world parameter is null");
+        if (world == null) {
+            this.plugin.getServer().getLogger().severe("GBGame initWorld: world parameter is null.");
             return;
-        }  
-        
+        }
+
         // Init lobby
-        if (plugin.getConfig().getString("lobby.name").equalsIgnoreCase(world.getName())) {
-            this.lobby = EngineUtils.locationFromConfig(this.plugin.getConfig(), world, "lobby.spawn");
-            world.setSpawnLocation(this.lobby.getBlockX(), this.lobby.getBlockY(), this.lobby.getBlockZ());
+        if (plugin.getConfig().getString("match.lobby-world-name").equalsIgnoreCase(world.getName())) {
+            lobbySpawnLocation = EngineUtils.locationFromConfig(this.plugin.getConfig(), world, "lobby.spawn");
+            world.setSpawnLocation(lobbySpawnLocation.getBlockX(), lobbySpawnLocation.getBlockY(), lobbySpawnLocation.getBlockZ());
         }
     }
-    
-    /**
-     * Init the matches.
-     * @author Kvnamo
-     */
-    public void initMatches() {
-        
-        // Init matches
-        this.matches = new ArrayList<ACMatch>();
-        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(0), this.matchRequiredPlayers));
-        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(1), this.matchRequiredPlayers));
-        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(2), this.matchRequiredPlayers));
-        this.matches.add(new ACMatch(this.plugin, this.plugin.getACWorld(3), this.matchRequiredPlayers));
+    public synchronized void playerJoin(PlayerJoinEvent event) {
+        Player bukkitPlayer = event.getPlayer();
+        this.playerJoin(bukkitPlayer);
     }
     
-    /**
-     * Call when player join the match
-     * @param PlayerJoinEvent
-     * @author kvnamo 
-     */
-    public synchronized void playerJoin(final PlayerJoinEvent event) {
-        
-        final Player bukkitPlayer = event.getPlayer();
+    public synchronized void playerJoin(final Player bukkitPlayer) {
 
-        Bukkit.getScheduler().runTaskAsynchronously(this.plugin, new Runnable(){
+        // Player banned
+        if (this.plugin.getPersistence().isPlayerBanned(bukkitPlayer.getName())) {
+            bukkitPlayer.kickPlayer(plugin.getConfig().getString("match.ban-message"));
+            return;
+        }
+        if(this.plugin.getServer().getOnlinePlayers().length >= this.maxPlayers){
+            this.serverStatus = ServerStatusEnum.FULL;
+            plugin.getPersistence().updateServerStatus(ServerStatusEnum.FULL, ServerStatusEnum.FULL.name());
+        }
+        //check if some match is already free.
+        if(this.serverStatus == ServerStatusEnum.FULL){
+            this.setNextMatch();
+        }
+        // Create player
+        MinecadeAccount account = plugin.getPersistence().getMinecadeAccount(bukkitPlayer.getName());
+        final ACPlayer player = new ACPlayer(account, bukkitPlayer);
+
+        switch (this.serverStatus) {
+        case WAITING_FOR_PLAYERS:
+
+            EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+            this.loadLobbyInventory(player);
             
-            @Override
-            public void run(){
-                // Check if the player is banned
-                if(ACGame.this.plugin.getPersistence().isPlayerBanned(bukkitPlayer.getName())){
-                    bukkitPlayer.kickPlayer(ACGame.this.plugin.getConfig().getString("server.ban-message"));
-                    return;
-                }
-            
-                final PlayerModel playerModel = ACGame.this.plugin.getPersistence().getPlayer(bukkitPlayer.getName());
-                final MinecadeAccount minecadeAccount = ACGame.this.plugin.getPersistence().getMinecadeAccount(bukkitPlayer.getName());
+            ghostManager.setGhost(player.getBukkitPlayer(), true);
+
+            // Check if the server needs more players or if the player is VIP
+            if(plugin.getServer().getOnlinePlayers().length < this.maxPlayers){
                 
-                // Create player
-                ACPlayer player = new ACPlayer();
-                player.setBukkitPlayer(bukkitPlayer);
-                player.setPlayerModel(playerModel);
-                player.setMinecadeAccount(minecadeAccount);
+                this.players.put(bukkitPlayer.getName(), player);
+
+                // Update scoreboard
+                //this.acScoreboard.assignTeam(player);  // TODO if I enable this the players cannot see because they are on != teams
+                bukkitPlayer.setScoreboard(this.acScoreboard.getScoreboard());
+                this.acScoreboard.setLobbyPlayers(this.requiredPlayersToMatch - this.players.size());
+
+                // Teleport to lobby location by default
+                bukkitPlayer.teleport(this.lobbySpawnLocation);
+
+                startMatch(false, this.currentMatch);
+                return;
+            } else {
+                Bukkit.getLogger().severe(String.format("Disconect linea 181"));
+                EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+            }
+            break;
+        case OFFLINE:
+            // If the server is ofline disconnect the player.
+            EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+            break;
+        case FULL:
+            if((player.getMinecadeAccount().isVip() || plugin.getPersistence().isPlayerStaff(player.getBukkitPlayer())) 
+                    && (plugin.getServer().getOnlinePlayers().length < this.maxPlayers + this.vipPlayers)){
                 
-                // Check if the server needs more players or if the player is VIP
-                if(ACGame.this.players.size() <= ACGame.this.maxPlayers || (player.getMinecadeAccount().isVip() && ACGame.this.players.size() <= ACGame.this.vipPlayers)){
-                    
-                    // Load lobby inventory
-                    player.loadLobbyInventory(ACGame.this.plugin);
-                    
-                    // Assign player score board
-                    ACGame.this.acScoreboard.assignPlayerTeam(player);
-                    bukkitPlayer.setScoreboard(ACGame.this.acScoreboard.getScoreboard());
-                    
-                    // Add player to players collection
-                    ACGame. this.players.put(bukkitPlayer.getName(), player);
-                    
-                    Bukkit.getScheduler().runTask(ACGame.this.plugin, new Runnable() {
-                        
-                        @Override
-                        public void run() {
-                            bukkitPlayer.teleport(ACGame.this.lobby);                            
-                        }
-                    });
-                     
-                    // Start a match if there are enough players
-                    ACGame.this.preInitNextMatch();
-                }
-                // If the server is full disconnect the player.
-                else{ 
-                    EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
-                    ACGame.this.plugin.getPersistence().updateServerStatus(ServerStatusEnum.FULL);
-                }
+                this.loadLobbyInventory(player);
+                //this player just can be an spectator
+                this.players.put(bukkitPlayer.getName(), player);
+                // Teleport to lobby location by default
+                bukkitPlayer.teleport(this.lobbySpawnLocation);
+                return;
             }
-        });
-    }
-    
-    /**
-     * Preinit next match
-     * @author Kvnamo
-     */
-    public synchronized void preInitNextMatch(){
-        
-        if(this.getPlayersToStart() == 0){
-
-            this.matchCountdown = plugin.getConfig().getInt("match.start-countdown");
-
-            // Get available match 
-            for (ACMatch match : this.matches) {
-                if(MatchStatusEnum.STOPPED.equals(match.getStatus())){
-
-                    // Select next match players
-                    for (ACPlayer player : this.players.values()) {
-                        
-                        if(player.getCurrentMatch() == null){
-                            
-                            player.setCurrentMatch(match);
-                            match.getPlayers().put(player.getBukkitPlayer().getName(), player);
-                            
-                            // Announce next match players
-                            player.getBukkitPlayer().sendMessage(String.format("%sYou are going to the next match on %s!", 
-                                ChatColor.YELLOW, match.getMinecadeWorld().getName()));
-                            
-                            // if match players is reached break
-                            if(match.getPlayers().size() == this.matchRequiredPlayers){
-                                
-                                // Start game timer.
-                                if(this.timerTask != null) this.timerTask.cancel();
-                                
-                                this.timerTask = new LobbyTimerTask(this);
-                                this.timerTask.setMatch(match);
-                                this.timerTask.setCountdown(this.matchCountdown);
-                                this.timerTask.runTaskTimer(this.plugin, 10, 20l);
-                                
-                                // Update scoreboard
-                                this.acScoreboard.setPlayersToStart(this.getPlayersToStart());
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
+            // If the server is full disconnect the non-vip player.
+            Bukkit.getLogger().severe(String.format("Disconect linea 202"));
+            EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+            break;
         }
-        
-        // Update scoreboard
-        this.acScoreboard.setPlayersToStart(this.getPlayersToStart());
+    }
+    public String forceStartMatch(){
+        if(this.serverStatus == ServerStatusEnum.WAITING_FOR_PLAYERS){
+            this.startMatch(true, this.currentMatch);
+            return null;
+        }
+        return "Server must be in Waiting For Players status to execute this command.";
     }
 
     /**
-     * Init next match
-     * @author Kvnamo
-     */
-    public synchronized void initNextMatch(final ACMatch match){
- 
-        // Create or update server status in DB.
-        Bukkit.getScheduler().runTaskAsynchronously(ACGame.this.plugin, new Runnable() {
-            
-            @Override
-            public void run() {
-                ACGame.this.plugin.getPersistence().createOrUpdateServer(match.getMinecadeWorld().getName());
-            }
-        });
-        
-        match.init();
-        this.timeLeft(plugin.getConfig().getInt("match.start-countdown"));
-    }
-    
-    /**
-     * Force start match
-     * @author Kvnamo
-     */
-    public synchronized String forceStartMatch() {
-        
-        if(this.matchCountdown < plugin.getConfig().getInt("match.start-countdown")){
-            return "You can't do this rigth now. A match is about to start.";
-        }
-        
-        // Get available match 
-        for (ACMatch match : this.matches) {
-            if(MatchStatusEnum.STOPPED.equals(match.getStatus())){
-                
-                // Select next match players
-                for (ACPlayer player : this.players.values()) {
-                    
-                    if(player.getCurrentMatch() == null){
-                        
-                        player.setCurrentMatch(match);
-                        match.getPlayers().put(player.getBukkitPlayer().getName(), player);
-                        
-                        // Announce next match players
-                        player.getBukkitPlayer().sendMessage(String.format("%sYou are going to the next match on %s!", 
-                            ChatColor.YELLOW, match.getMinecadeWorld().getName()));
-                        
-                        // if match players is reached break
-                        if(match.getPlayers().size() == this.matchRequiredPlayers){
-                            this.acScoreboard.setPlayersToStart(this.getPlayersToStart());
-                            match.init();
-                            return null;
-                        }
-                    }
-                }
-            }
-        }
-        
-        return "There is no match available now for doing this. Please wait for one of them to finish."; 
-    }
-
-    /**
-     * On player quit
-     * @param event
+     * Start match
+     * 
      * @author kvnamo
      */
-    public synchronized void playerQuit(final PlayerQuitEvent event){
+    public void startMatch(boolean forced, ACMatch match) {
+
+        if(match == null)
+            return;
+        // Check for required players.
+        if(!forced){
+            if (this.players.size() < this.requiredPlayersToMatch)
+                return;
+        }
         
+        String playersMatch = "";
+
+        // Send players to match.
+        synchronized (this.players) {
+            for (Iterator<ACPlayer> iterator = this.players.values().iterator(); iterator.hasNext();) {
+                // Get and remove player from lobby list
+                ACPlayer player = iterator.next();
+                EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+                iterator.remove();
+
+                this.acScoreboard.unassignTeam(player);
+
+                // add player to match player list
+                match.playerJoin(player);
+                //player.setCurrentMatchName(match.getMatchName());
+                
+                // remove invisibility
+                ghostManager.setGhost(player.getBukkitPlayer(), false);
+
+                playersMatch = StringUtils.isBlank(playersMatch) ? player.getBukkitPlayer().getName() : playersMatch + ", "
+                        + player.getBukkitPlayer().getName();
+            }
+            
+            this.broadcastMessageToGroup(
+                    match.getPlayers().values(),
+                    String.format("%s%s%s %sare going to the next match on %s.", ChatColor.RED, ChatColor.BOLD, playersMatch, ChatColor.DARK_GRAY,
+                            match.getMatchName()));
+
+            //match.getAcScoreboard().setMatchPlayers(match.getPlayers().size());
+            
+            match.init();
+        }
+    }
+
+    /**
+     * When player exits or gets kicked out of the match
+     * 
+     * @param PlayerQuitEvent
+     *            .
+     * @author kvnamo
+     */
+    public synchronized void playerQuit(PlayerQuitEvent event) {
         String playerName = event.getPlayer().getName();
         ACPlayer player = this.players.get(playerName);
-        
+        // The player is in a match
+        if (player == null) {
+            player = getPlayerFromMatch(playerName);
+            if(player != null){
+                ACMatch match = this.getMatchFromPlayer(player.getBukkitPlayer().getName());
+                if(match != null){
+                    event.setQuitMessage(null);
+                    match.playerQuit(player);
+                    return;
+                }
+            } else {
+                Bukkit.getLogger().severe(String.format("This player is not in match playerLists or spectatorList neither in lobby playerList: %s", playerName));
+            }
+            //maybe some players of a starting match was redirected to the game.
+            this.acScoreboard.setLobbyPlayers(this.requiredPlayersToMatch - this.players.size());
+            this.startMatch(false, this.currentMatch);
+            return;
+        }
+
+        // The player is in the lobby
         this.players.remove(playerName);
         
-        // Get player match
-        ACMatch match = player.getCurrentMatch();
+        ghostManager.removePlayer(player.getBukkitPlayer());
+
+        // Update scoreboard
+        this.acScoreboard.setLobbyPlayers(this.requiredPlayersToMatch - this.players.size());
+        this.acScoreboard.unassignTeam(player);
         
-        // The player is in the lobby
-        if (match == null){
-            // Update scoreboard
-            this.acScoreboard.setPlayersToStart(this.getPlayersToStart());
-            this.broadcastMessage(String.format("%s%s %squit the game.", ChatColor.RED, playerName, ChatColor.GRAY));
+        if(this.plugin.getServer().getOnlinePlayers().length < this.maxPlayers) {
+            plugin.getPersistence().updateServerStatus(ServerStatusEnum.WAITING_FOR_PLAYERS, this.currentMatch.getMatchName());
         }
-        else if(MatchStatusEnum.STOPPED.equals(match.getStatus())){
-            match.getPlayers().remove(playerName);
-            
-            // Match is about to begin and we need a new player.
-            for(ACPlayer waitingPlayer : this.players.values()){
-                if(waitingPlayer.getCurrentMatch() == null){
-                    match.getPlayers().put(waitingPlayer.getBukkitPlayer().getName(), waitingPlayer);
-                    break;
+    }
+
+    public void entityDamage(EntityDamageEvent event) {
+
+        if (event.getEntity() instanceof Player) {
+            switch (event.getCause()) {
+            case VOID:
+                String playerName = ((Player) event.getEntity()).getName();
+                ACPlayer player = this.players.get(playerName);
+
+                // cancel event when player is in lobby
+                if (player != null) {
+                    player.getBukkitPlayer().teleport(lobbySpawnLocation);
+                    event.setCancelled(true);
+                } else {
+                    // The player is in a match
+                    player = this.getPlayerFromMatch(playerName);
+                    if(player != null){
+                        ACMatch match = this.getMatchFromPlayer(player.getBukkitPlayer().getName());
+                        if(match != null){
+                            match.entityDamagedByVoid(player);
+                            event.setCancelled(true);
+                        }
+                    }
+                    return;
                 }
-            }
-            
-            // If there is no player stop timer and wait.
-            if(match.getPlayers().size() < this.matchRequiredPlayers){
-                
-                // Remove current match
-                for (Iterator<ACPlayer> iterator = match.getPlayers().values().iterator(); iterator.hasNext();) {
-                    ((ACPlayer) iterator.next()).setCurrentMatch(null);
-                    iterator.remove();
-                }
-                
-                // Stop timer
-                this.timerTask.cancel();
-            }
-            
-            this.acScoreboard.setPlayersToStart(this.getPlayersToStart());
-            this.broadcastMessage(String.format("%s%s %squit the game.", ChatColor.RED, playerName, ChatColor.GRAY));
-        }
-        else match.playerQuit(player);
-        
-        // Update server status
-        Bukkit.getScheduler().runTaskAsynchronously(this.plugin, new Runnable() {
-        
-            @Override
-            public void run() {
-                ACGame.this.plugin.getPersistence().updateServerStatus(ServerStatusEnum.WAITING_FOR_PLAYERS);
-            }
-        });
-    }
-    
-    /**
-     * On entity death.
-     * @param event
-     * @author: kvnamo
-     */
-    public void entityDeath(final EntityDeathEvent event) {
-        
-        if(event.getEntity() instanceof Player){
-        
-            final ACPlayer player = this.players.get(((Player)event.getEntity()).getName());
-            final ACMatch match = player.getCurrentMatch();
-            
-            // If the player is in the lobby do nothing
-            if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
-                match.playerDeath(event, player);
-            }
-        }
-        else if (event.getEntity().getKiller() instanceof Player){
-            
-            final ACPlayer killer = this.players.get(((Player)event.getEntity().getKiller()).getName());
-            final ACMatch match = killer.getCurrentMatch();
-            
-            // If the player is in the lobby do nothing
-            if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) && 
-                CharacterEnum.ASSASSIN.equals(killer.getCharacter())){
-                match.npcDeath(event, (Zombie)event.getEntity(), killer);
+                break;
+            case FALL:
+                event.setCancelled(true);
+                break;
+            default:
+                break;
             }
         }
     }
-    
-    /**
-     * On player respawn.
-     * @param event
-     * @author: kvnamo
-     */
-    public void playerRespawn(final PlayerRespawnEvent event){
-        
-        final ACPlayer player = this.players.get(event.getPlayer().getName());
-        final ACMatch match = player.getCurrentMatch();
-        
-        // If the player is in the lobby do nothing
-        if (match != null && !MatchStatusEnum.STOPPED.equals(match.getStatus())){
-            match.playerRespawn(event, player);
-        }
-        else event.setRespawnLocation(this.lobby); 
-    }
-    
-    /**
-     * On entity damage
-     * @param event
-     * @author Kvnamo
-     */
-    public void entityDamage(final EntityDamageEvent event) {
-        
-        // If the player was damaged
-        if(event.getEntity() instanceof Player){
-            
-            final ACPlayer player = this.players.get(((Player)event.getEntity()).getName());
-            final ACMatch match = player.getCurrentMatch();
-            
-            // If the player is in a match
-            if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus())){
-                match.playerDamage(event, player);
-                return;
-            } 
-            
-            // If the player is in the lobby do nothing
-            if(DamageCause.VOID.equals(event.getCause())){
-                event.getEntity().teleport(this.lobby);
-            }
-            
-            event.setCancelled(true);
-        }
-        else if(event.getEntity() instanceof Zombie && DamageCause.ENTITY_ATTACK.equals(event.getCause())){
-            
-            final ACPlayer damager = this.players.get(((Player)((EntityDamageByEntityEvent) event).getDamager()).getName());
-            final ACMatch match = damager.getCurrentMatch();
-            
-            // If the player is in the lobby do nothing
-            if (match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) && 
-                CharacterEnum.ASSASSIN.equals(damager.getCharacter())){
+
+    public void entityDamagedByEntity(EntityDamageByEntityEvent event) {
+
+        // victim was a player
+        if (event.getEntity() instanceof Player) {
+            String playerName = ((Player) event.getEntity()).getName();
+            ACPlayer victimPlayer = this.getPlayerFromMatch(playerName);
+
+            // Player is in the lobby
+            if (this.players.get(playerName) != null && victimPlayer == null) {
+                // all damages in the lobby must be cancelled
+                event.setCancelled(true);
                 return;
             }
+            ACMatch match = this.getMatchFromPlayer(playerName);
+            if (match != null) {
+                match.entityDamageByEntityEvent(event);
+            }
         }
-        
-        event.setCancelled(true);
-    } 
-    
+        // damager was a player
+        if (event.getDamager() instanceof Player) {
+            String damagerName = ((Player) event.getDamager()).getName();
+            ACPlayer damagerPlayer = this.getPlayerFromMatch(damagerName);
+
+            // Player is in the lobby
+            if (this.players.get(damagerName) != null && damagerPlayer == null) {
+                // all damages in the lobby must be cancelled
+                event.setCancelled(true);
+                return;
+            }
+
+            if (null != damagerPlayer) {
+                ACMatch match = this.getMatchFromPlayer(damagerPlayer.getBukkitPlayer().getName());
+                if (match != null) {
+                    // victim was a zombie or any entity
+                    match.entityDamagedByDamagerPlayer(event, damagerPlayer);
+                }
+            }
+        }
+        //damager was a arrow
+        if(event.getDamager() instanceof Arrow){
+            if(event.getEntity() instanceof Player){
+                String playerName = ((Player) event.getEntity()).getName();
+                ACPlayer victimPlayer = this.getPlayerFromMatch(playerName);
+                // Player is in the lobby
+                if (this.players.get(playerName) != null && victimPlayer == null) {
+                    // all damages in the lobby must be cancelled
+                    event.setCancelled(true);
+                    return;
+                }
+                ACMatch match = this.getMatchFromPlayer(playerName);
+                if (match != null) {
+                    match.entityDamagedByOtherEntity(victimPlayer, event);
+                }
+            }
+            if(event.getEntity() instanceof Zombie){
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    public void playerDeath(PlayerDeathEvent event) {
+
+        String playerName = ((Player) event.getEntity()).getName();
+        ACPlayer player = this.players.get(playerName);
+        // The player is in a match
+        if (player == null) {
+            player = getPlayerFromMatch(playerName);
+            if(player != null){
+                ACMatch match = this.getMatchFromPlayer(player.getBukkitPlayer().getName());
+                if(match != null){
+                    match.playerDeath(event, player);
+                }
+            }
+            return;
+        }
+    }
+
+    public void playerRespawn(final PlayerRespawnEvent event) {
+
+        String playerName = ((Player) event.getPlayer()).getName();
+        ACPlayer player = this.players.get(playerName);
+        // The player is in a match
+        if (player == null) {
+            player = getPlayerFromMatch(playerName);
+            if(player != null){
+                ACMatch match = this.getMatchFromPlayer(player.getBukkitPlayer().getName());
+                if(match != null){
+                    match.playerRespawn(event, player);
+                }
+            }
+            return;
+        }
+    }
+
     /**
-     * On the player moves
+     * On player move
+     * 
      * @param event
      * @author kvnamo
      */
-    public void playerMove(final PlayerMoveEvent event) {
+    public void playerMove(PlayerMoveEvent event) {
+
+        String playerName = ((Player) event.getPlayer()).getName();
+        ACPlayer player = this.players.get(playerName);
+
+        // The player is in a match
+        if (player == null) {
+            player = getPlayerFromMatch(playerName);
+            if(player != null){
+                ACMatch match = this.getMatchFromPlayer(player.getBukkitPlayer().getName());
+                if(match != null){
+                    match.playerMove(event, player);
+                }
+            }
+            return;
+        }
+    }
+    
+    public void entityTarget(EntityTargetEvent event) {
+        event.setCancelled(true);
+    }
+
+    public void entityDeath(EntityDeathEvent event) {
+        if (event.getEntity().getKiller() instanceof Player) {
+
+            String playerName = ((Player) event.getEntity().getKiller()).getName();
+            ACPlayer player = this.players.get(playerName);
+            // The player is in a match
+            if (player == null) {
+                player = getPlayerFromMatch(playerName);
+                if(player != null){
+                    ACMatch match = this.getMatchFromPlayer(player.getBukkitPlayer().getName());
+                    if(match != null){
+                        match.entityDeath(event, player);
+                    }
+                }
+                return;
+            }
+        }
+    }
+
+    /**
+     * On entity combust
+     * 
+     * @param event
+     * @author kvnamo
+     */
+    public void entityCombust(EntityCombustEvent event) {
+        if (event.getEntity() instanceof Zombie)
+            event.setCancelled(true);
+    }
+
+
+    public void creatureSpawn(CreatureSpawnEvent event) {
+
+        if (event.getEntity() instanceof Zombie) {
+            if (event.getSpawnReason() == SpawnReason.CUSTOM)
+                return;
+        }
+        event.setCancelled(true);
+    }
+
+    private ACPlayer getPlayerFromMatch(String playerName) {
+        ACPlayer player = null;
+        synchronized (this.matches) {
+            for (ACMatch match : this.matches.values()) {
+                // Get match player
+                player = match.getPlayers().get(playerName);
+                if (player != null) {
+                    //player.setCurrentMatchName(match.getMatchName());
+                    return player;
+                }
+                player = match.getSpectators().get(playerName);
+                if (player != null) {
+                    //player.setCurrentMatchName(match.getMatchName());
+                    return player;
+                }
+            }
+        }
+        return null;
+    }
+
+    private ACMatch getMatchFromPlayer(String playerName) {
+        synchronized (this.matches) {
+            for (ACMatch match : this.matches.values()) {
+                if (match.getPlayers().containsKey(playerName) || match.getSpectators().containsKey(playerName))
+                    return match;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get next match
+     * 
+     * @return next match
+     * @author kvnamo
+     */
+    public void setNextMatch() {
+        // Get available match
+        ACMatch nextMatch = null;
+
+        synchronized (this.matches) {
+            Bukkit.getLogger().severe(String.format("Map of matchs has %s matchs stored: ", this.matches.size()));
+            for (ACMatch match : this.matches.values()) {
+                Bukkit.getLogger().severe(String.format("The match stored %s has status %s ", match.getMatchName(), match.getStatus()));
+                if (MatchStatusEnum.STOPPED.equals(match.getStatus()) && nextMatch == null) {
+                    nextMatch = match;
+                    this.currentMatch =  nextMatch;
+                    nextMatch.setStatus(MatchStatusEnum.STARTING_MATCH);
+                    Bukkit.getLogger().severe(String.format("The match stored %s has status %s will be the next match", match.getMatchName(), match.getStatus()));
+                }
+            }
+        }
+        if (nextMatch == null){
+            Bukkit.getLogger().severe(String.format("Server Full, all matchs are running"));
+            this.serverStatus = ServerStatusEnum.FULL;
+            this.plugin.getPersistence().updateServerStatus(ServerStatusEnum.FULL, ServerStatusEnum.FULL.name());
+            this.currentMatch = null;
+            return;
+        }
+        this.serverStatus = ServerStatusEnum.WAITING_FOR_PLAYERS;
+        this.plugin.getPersistence().createOrUpdateServer(this.currentMatch.getMatchName());
+    }
+
+    public void rightClick(PlayerInteractEvent event) {
+        if (event.getPlayer() instanceof Player) {
+
+            String playerName = ((Player) event.getPlayer()).getName();
+            ACPlayer player = this.players.get(playerName);
+
+            // The player is in a match
+            if (player == null) {
+                player = getPlayerFromMatch(playerName);
+                if(player != null){
+                    ACMatch match = this.getMatchFromPlayer(player.getBukkitPlayer().getName());
+                    if(match != null){
+                        match.rightClick(event);
+                    }
+                }
+                return;
+            } else {
+                ItemStack itemInHand = player.getBukkitPlayer().getItemInHand();
+                if (itemInHand != null) {
+                    if (ACInventory.getLeaveCompass().getType().equals(itemInHand.getType())){
+                        EngineUtils.disconnect(player.getBukkitPlayer(), LOBBY, null);
+                    }
+                }
+            }
+        }
+    }
+    
+    public void projectileHit(ProjectileHitEvent event) {
         
-        final ACPlayer player = this.players.get(event.getPlayer().getName());
-        final ACMatch match = player.getCurrentMatch();
-        
-        // If the player is in the lobby do nothing
-        if (match != null){
-            match.playerMove(event, player);
+        final Projectile projectile = event.getEntity();
+
+        // If player throws an Arrow remove it from world
+        if(EntityType.ARROW.equals(projectile.getType())){
+            projectile.remove();
+        }
+    }
+    
+    public void entityShootBowEvent(EntityShootBowEvent event){
+        if(event.getEntity() instanceof Player){
+            Player player = (Player)event.getEntity();
+            if(null != player){
+                ACPlayer acPlayer = this.players.get(player.getName());
+                // The player is in a match
+                if (acPlayer == null) {
+                    acPlayer = getPlayerFromMatch(player.getName());
+                    if(acPlayer != null){
+                        ACMatch match = this.getMatchFromPlayer(acPlayer.getBukkitPlayer().getName());
+                        if(match != null){
+                            match.playerShootBow(event, acPlayer);
+                        }
+                    }
+                    return;
+                }
+            }
+        }
+    }
+    
+    public void inventoryOpenEvent(InventoryOpenEvent event){
+        if(event.getPlayer() instanceof Player){
+            Player bukkitPlayer =  (Player)event.getPlayer();
+            
+            ACPlayer player = this.players.get(bukkitPlayer.getName());
+
+            // The player is in a match
+            if (player == null) {
+
+                player = getPlayerFromMatch(bukkitPlayer.getName());
+                if(player == null){
+                    event.setCancelled(true);
+                    return;
+                }
+            }
         }
     }
     
@@ -524,166 +653,222 @@ public class ACGame {
         
         // Get item in hand
         Player bukkitPlayer = event.getPlayer();
-        ItemStack itemInHand = event.getPlayer().getItemInHand();
-        
-        // Check item used with right click.
-        if (Action.RIGHT_CLICK_AIR.equals(event.getAction())) {
-
-            if(ACInventory.getLeaveCompass().getType().equals(itemInHand.getType())){
-                EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+        if(bukkitPlayer != null){
+            if(event.getPlayer() instanceof Player){
+                Player player = event.getPlayer();
+                if(null != player){
+                    ACPlayer acPlayer = this.players.get(player.getName());
+                    // The player is in a match
+                    if (acPlayer == null) {
+                        acPlayer = getPlayerFromMatch(player.getName());
+                        if(acPlayer != null){
+                            ACMatch match = this.getMatchFromPlayer(acPlayer.getBukkitPlayer().getName());
+                            if(match != null){
+                                match.onPlayerInteract(event, acPlayer);
+                            }
+                            return;
+                        }
+                        event.setCancelled(true);
+                    } else {
+                        //player is in lobby
+                        ItemStack itemInHand = event.getPlayer().getItemInHand();
+                        if(ACInventory.getLeaveCompass().getType().equals(itemInHand.getType())){
+                            EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    public void chatMessage(AsyncPlayerChatEvent event){
+        if (event.getPlayer() instanceof Player) {
+            
+            ACPlayer player = this.players.get(event.getPlayer().getName());
+            //player in in AC lobby
+            if(this.players.get(event.getPlayer().getName()) != null){
+                player = this.players.get(event.getPlayer().getName());
+                // Last message.
+                if (StringUtils.isNotBlank(player.getLastMessage()) && player.getLastMessage().equals(event.getMessage().toLowerCase())) {
+                    event.getPlayer().sendMessage(String.format("%sPlease don't send the same message multiple times!", ChatColor.GRAY));
+                    event.setCancelled(true);
+                }
+                
+                player.setLastMessage(event.getMessage().toLowerCase());
+                PlayerTagEnum playerTag = PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount());
+                event.setFormat(playerTag.getPrefix() + ChatColor.WHITE + "%s" + ChatColor.GRAY + ": %s");
                 return;
-            }
-            else if(ACInventory.getInvisibleEmerald().getType().equals(itemInHand.getType())){
-                final ACPlayer player = this.players.get(bukkitPlayer.getName());
-                final ACMatch match = player.getCurrentMatch();
-                
-                if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) && 
-                    CharacterEnum.ASSASSIN.equals(player.getCharacter()) && !player.isCooling()){
-                    
-                    // Start invisibility.
-                    match.makeInvisible(player, 0);
-                    player.getBukkitPlayer().sendMessage(String.format("%sYou are invisible.", ChatColor.AQUA));
+            } else {
+                ACPlayer acPlayer = this.getPlayerFromMatch(event.getPlayer().getName());
+                // The player is in a match
+                if (acPlayer != null) {
+                    ACMatch match = this.getMatchFromPlayer(acPlayer.getBukkitPlayer().getName());
+                    if(match != null){
+                        match.chatMessage(event);
+                    }
+                    return;
                 }
-                else bukkitPlayer.sendMessage(String.format("%sYou are cooling down. Wait for use invisibility again.", ChatColor.AQUA));
             }
-            else if(ACInventory.getSmokeBomb().getType().equals(itemInHand.getType())){
-                final ACPlayer player = this.players.get(bukkitPlayer.getName());
-                final ACMatch match = player.getCurrentMatch();
-                
-                if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) && 
-                    CharacterEnum.ASSASSIN.equals(player.getCharacter())){bukkitPlayer.getInventory().addItem(ACInventory.getSmokeBomb());
-                }           
-            }
-        }
-        else if(Action.RIGHT_CLICK_BLOCK.equals(event.getAction())){
-            
-            final ACPlayer player = this.players.get(bukkitPlayer.getName());
-            final ACMatch match = player.getCurrentMatch();
-            
-            if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) && CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-                ACShop.shop(this.plugin, player);
-            } 
-            else event.setCancelled(true);
-        }
-        else if(event.getClickedBlock() != null && !event.getPlayer().isOp()) event.setCancelled(true);
-    }
-    
-    /**
-     * on projectile hit 
-     * @param event
-     * @author Kvnamo
-     */
-    public void projectileHit(ProjectileHitEvent event) {
-        
-        final Projectile projectile = event.getEntity();
-
-        // If player throws an Arrow remove it from world
-        if(EntityType.ARROW.equals(projectile.getType())){
-            Bukkit.getScheduler().runTask(this.plugin, new Runnable() {
-                
-                @Override
-                public void run() {
-                    projectile.remove();   
-                }
-            });
-        }
-    }
-    
-    /**
-     * Chat message formatting
-     * @param event
-     * @author Kvnamo
-     */
-    public void chatMessage(AsyncPlayerChatEvent event) {
-        
-        final ACPlayer player = this.players.get(event.getPlayer().getName());
-
-        // Last message.
-        if(StringUtils.isNotBlank(player.getLastMessage()) && player.getLastMessage().equals(event.getMessage().toLowerCase())){
-            event.getPlayer().sendMessage(String.format("%sPlease don't send the same message multiple times!", ChatColor.GRAY));
             event.setCancelled(true);
-            return;
-        }
-
-        player.setLastMessage(event.getMessage().toLowerCase());
-        PlayerTagEnum playerTag = PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount());
-        
-        final ACMatch match = player.getCurrentMatch();
-        
-        if(match != null && !MatchStatusEnum.STOPPED.equals(match.getStatus())){
-            // Send message only to players in current match
-            match.broadcastMessage(String.format("%s%s%s%s: %s", playerTag.getPrefix(), ChatColor.WHITE, 
-                player.getBukkitPlayer().getName(), ChatColor.GRAY, event.getMessage()));
-        }
-        else this.broadcastMessage(String.format("%s%s%s%s: %s", playerTag.getPrefix(), ChatColor.WHITE, 
-            player.getBukkitPlayer().getName(), ChatColor.GRAY, event.getMessage()));
-        
-        event.setCancelled(true);
-    }
-    
-    /**
-     * Lobby time left to start a match
-     * @param countdown
-     * @author Kvnamo
-     */
-    public void timeLeft(int countdown) {
-        
-        this.matchCountdown = countdown;
-        this.acScoreboard.setTimeLeft(countdown);
-        
-        if(countdown > 6) return;
-        
-        for (ACPlayer player : this.players.values()) {
-            if(player.getCurrentMatch() == null || MatchStatusEnum.STOPPED.equals(player.getCurrentMatch().getStatus())){
-                player.getBukkitPlayer().playSound(player.getBukkitPlayer().getLocation(), Sound.CLICK, 3, -3);
-            }
-        } 
-    }
-    
-    /**
-     * Go to top shop
-     * @param bukkitPlayer
-     * @author Kvnamo
-     */
-    public void goToTopShop(final Player bukkitPlayer){
-        
-        final ACPlayer player = this.players.get(bukkitPlayer.getName());
-        final ACMatch match = player.getCurrentMatch();
-        
-        if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) &&
-            CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-            bukkitPlayer.teleport(((ACWorld) match.getMinecadeWorld()).getTopShopLocation());
         }
     }
     
-    /**
-     * Go to lower shop
-     * @param bukkitPlayer
-     * @author Kvnamo
-     */
     public void goToLowerShop(final Player bukkitPlayer){
         
-        final ACPlayer player = this.players.get(bukkitPlayer.getName());
-        final ACMatch match = player.getCurrentMatch();
+//        final ACPlayer player = this.players.get(bukkitPlayer.getName());
+//        final ACMatch match = player.getCurrentMatch();
+//        
+//        if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) &&
+//            CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+//            bukkitPlayer.teleport(((ACWorld) match.getMinecadeWorld()).getLowerShopLocation());
+//        }
+    }
+    
+    public void goToTopShop(final Player bukkitPlayer){
         
-        if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) &&
-            CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-            bukkitPlayer.teleport(((ACWorld) match.getMinecadeWorld()).getLowerShopLocation());
-        }
+//        final ACPlayer player = this.players.get(bukkitPlayer.getName());
+//        final ACMatch match = player.getCurrentMatch();
+//        
+//        if(match != null && MatchStatusEnum.RUNNING.equals(match.getStatus()) &&
+//            CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+//            bukkitPlayer.teleport(((ACWorld) match.getMinecadeWorld()).getTopShopLocation());
+//        }
+    }
+
+    /**
+     * Loads the player stats
+     * 
+     * @author jdgil
+     */
+    private ItemStack getPlayerStats(ACPlayer player) {
+
+        ItemStack stats = ACInventory.getStatsBook(player);
+        BookMeta statsMeta = (BookMeta) stats.getItemMeta();
+
+        DecimalFormat decimalFormat = new DecimalFormat("0.000");
+        PlayerModel model = player.getPlayerModel();
+        String kdr = (double) model.getLosses() == 0 ? "0" : decimalFormat.format((double) model.getKills()
+                / (double) model.getLosses());
+        String timePlayed = decimalFormat.format((double) model.getTimePlayed() / (double) 86400);
+
+        statsMeta
+                .setPages(String
+                        .format("%s%s%s STATS! \n\n\n%s %sWins: %s%s\n %sKills: %s%s\n %sDeaths: %s%s\n %sLooses: %s%s\n %sButter Coins: %s%s\n %sKDR: %s%s\n %sTime played: %s%s days.",
+                                ChatColor.BOLD, ChatColor.RED, player.getBukkitPlayer().getName().toUpperCase(), ChatColor.DARK_GRAY, ChatColor.BOLD,
+                                ChatColor.DARK_GRAY, model.getWins(), ChatColor.BOLD, ChatColor.DARK_GRAY,
+                                model.getKills(), ChatColor.BOLD, ChatColor.DARK_GRAY, model.getDeaths(), ChatColor.BOLD,
+                                ChatColor.DARK_GRAY, model.getLosses(), ChatColor.BOLD, ChatColor.DARK_GRAY, player.getMinecadeAccount()
+                                        .getButterCoins(), ChatColor.BOLD, ChatColor.DARK_GRAY, kdr, ChatColor.BOLD, ChatColor.DARK_GRAY, timePlayed));
+        stats.setItemMeta(statsMeta);
+
+        return stats;
     }
     
     /**
-     * Broadcast lobby players message
-     * @param format
+     * Load player inventory
      * @author Kvnamo
      */
-    public void broadcastMessage(String message) {
+    public void loadLobbyInventory(final ACPlayer player) {
         
-        // Send message only to players in lobby
-        for (ACPlayer player : this.players.values()) {
-            if(player.getCurrentMatch() == null || MatchStatusEnum.STOPPED.equals(player.getCurrentMatch().getStatus())){
-                player.getBukkitPlayer().sendMessage(message);
+        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+            
+            @Override
+            public void run() {
+                EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+                player.getBukkitPlayer().getInventory().addItem(ACInventory.getInstructionsBook());
+                player.getBukkitPlayer().getInventory().addItem(ACGame.this.getPlayerStats(player));
+                player.getBukkitPlayer().getInventory().addItem(ACInventory.getLeaveCompass());
             }
+        });
+    }
+
+    /**
+     * Broadcast message to every player in match
+     * 
+     * @param message
+     * @author kvnamo
+     */
+    private void broadcastMessage(String message) {
+        for (ACPlayer player : this.players.values()) {
+            player.getBukkitPlayer().sendMessage(message);
         }
     }
+    
+    public void initMatches() {
+        // Init matches
+        for(Class<MinecadeWorld> world : this.worlds){
+            this.matches.put(world.getSimpleName(), new ACMatch(this.plugin, world.getSimpleName(), world));
+        }
+    }
+
+    /**
+     * Broadcast message to group of players in game
+     * 
+     * @param message
+     * @author jdgil
+     */
+    private void broadcastMessageToGroup(Collection<ACPlayer> players, String message) {
+        for (ACPlayer player : players) {
+            player.getBukkitPlayer().sendMessage(message);
+        }
+    }
+
+    /**
+     * @return the players
+     */
+    public Map<String, ACPlayer> getPlayers() {
+        return players;
+    }
+
+    /**
+     * @return the matches
+     */
+    public Map<String, ACMatch> getMatches() {
+        return matches;
+    }
+
+    /**
+     * @return the ghostManager
+     */
+    public GhostManager getGhostManager() {
+        return ghostManager;
+    }
+
+    /**
+     * @return the lobbySpawnLocation
+     */
+    public Location getLobbySpawnLocation() {
+        return lobbySpawnLocation;
+    }
+
+    /**
+     * @return the acScoreboard
+     */
+    public ACScoreboard getACScoreboard() {
+        return acScoreboard;
+    }
+
+    /**
+     * @return the requiredPlayersToMatch
+     */
+    public int getRequiredPlayersToMatch() {
+        return requiredPlayersToMatch;
+    }
+
+    /**
+     * @return the currentMatch
+     */
+    public ACMatch getCurrentMatch() {
+        return currentMatch;
+    }
+
+    /**
+     * @return the serverStatus
+     */
+    public ServerStatusEnum getServerStatus() {
+        return serverStatus;
+    }
+
 }
+

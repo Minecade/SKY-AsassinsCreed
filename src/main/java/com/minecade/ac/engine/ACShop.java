@@ -92,7 +92,7 @@ public class ACShop {
                         bukkitPlayer.setHealth(bukkitPlayer.getMaxHealth());
                     }
                     else if(TopShopEnum.INVISIBILITY.equals(skill)){
-                        player.setInvisibilityTime(2);
+                        //player.setInvisibilityTime(2);
                     }
                     else bukkitPlayer.addPotionEffect(skill.getPotionEffect());
                     

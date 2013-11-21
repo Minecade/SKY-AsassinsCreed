@@ -3,7 +3,9 @@ package com.minecade.ac.enums;
 public enum MatchStatusEnum {
 
     // Match ready to start.
-    READY,
+    STARTING_MATCH,
+    
+    READY_TO_START,
     
     // Match running.
     RUNNING,

@@ -12,7 +12,7 @@ public class ACLobby extends MinecadeWorld {
      */
     public ACLobby(MinecadePlugin plugin) {
         
-        super("AC Lobby", "aclobby", plugin);
+        super(plugin);
         
         // player v.s player enable
         super.world.setPVP(false);

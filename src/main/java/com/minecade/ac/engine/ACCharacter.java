@@ -20,28 +20,17 @@ public class ACCharacter {
      * @param player
      * @author Kvnamo
      */
-    public static void assassin(AssassinsCreedPlugin plugin, final ACPlayer player) { 
+    public static void assassin(ACPlayer player) { 
         
-        Bukkit.getScheduler().runTask(plugin, new Runnable() {
-            
-            @Override
-            public void run() {
-                
-                // Clear player
-                EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
-                
-                // Set default lives
-                player.setLives(3);
-                
-                // Set inventory
-                player.setInvisibilityTime(1);
-                player.getBukkitPlayer().setLevel(1);
-                player.getBukkitPlayer().setHealth(20);
-                player.getBukkitPlayer().getInventory().addItem(ACInventory.getInvisibleEmerald());
-                player.getBukkitPlayer().getInventory().addItem(ACInventory.getSmokeBomb());
-                player.getBukkitPlayer().getInventory().setArmorContents(ACInventory.getAssassinArmor());
-            }
-        });
+        // Clear player
+        EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
+        // Set inventory
+        player.getBukkitPlayer().setLevel(1);
+        player.getBukkitPlayer().setHealth(20);
+        player.getBukkitPlayer().getInventory().addItem(ACInventory.getInvisibleEmerald());
+        player.getBukkitPlayer().getInventory().addItem(ACInventory.getSmokeBomb());
+        player.getBukkitPlayer().getInventory().addItem(ACInventory.getPlaceFinder());
+        player.getBukkitPlayer().getInventory().setArmorContents(ACInventory.getAssassinArmor());
     }
     
     /**
@@ -49,9 +38,9 @@ public class ACCharacter {
      * @param player
      * @author Kvnamo
      */
-    public static void bodyguard(AssassinsCreedPlugin plugin, final ACPlayer player) { 
+    public static void bodyguard(final ACPlayer player) { 
         
-        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+        Bukkit.getScheduler().runTask(AssassinsCreedPlugin.getInstance(), new Runnable() {
             
             @Override
             public void run() {
@@ -69,9 +58,6 @@ public class ACCharacter {
                 
                 // Set inventory
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getSolidCane());
-                player.getBukkitPlayer().sendMessage(String.format(
-                    "%s%sYou are a Royal Navy Bodyguard. MISSION: defend the 5 victims from the Assassin.", 
-                    ChatColor.BLUE, ChatColor.BOLD));
             }
         });
     }
@@ -81,9 +67,9 @@ public class ACCharacter {
      * @param player
      * @author Kvnamo
      */
-    public static void musketeer(AssassinsCreedPlugin plugin, final ACPlayer player) {
+    public static void musketeer(final ACPlayer player) {
         
-        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+        Bukkit.getScheduler().runTask(AssassinsCreedPlugin.getInstance(), new Runnable() {
             
             @Override
             public void run() {
@@ -101,9 +87,6 @@ public class ACCharacter {
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getStrongCane());
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getBow());
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getArrow());
-                player.getBukkitPlayer().sendMessage(String.format(
-                    "%s%sYou are a Royal Navy Musketeer. MISSION: defend the 5 victims from the Assassin.", 
-                    ChatColor.BLUE, ChatColor.BOLD)); 
             }
         });
     }
@@ -114,27 +97,21 @@ public class ACCharacter {
      * @param player
      * @author Kvnamo
      */
-    public static void swordsman(AssassinsCreedPlugin plugin, final ACPlayer player) {
+    public static void swordsman(final ACPlayer player) {
         
-        Bukkit.getScheduler().runTask(plugin, new Runnable() {
+        Bukkit.getScheduler().runTask(AssassinsCreedPlugin.getInstance(), new Runnable() {
             @Override
             public void run() {
                 
                 // Clear player
                 EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
-        
                 // Set default lives
                 player.setLives(1);
-                
                 // Set potions
                 player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, Integer.MAX_VALUE, 1));
-                
                 // Set inventory
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getCane());
                 player.getBukkitPlayer().getInventory().addItem(ACInventory.getScimitar());
-                player.getBukkitPlayer().sendMessage(String.format(
-                    "%s%sYou are a Royal Navy Swordsman. MISSION: defend the 5 victims from the Assassin.", 
-                    ChatColor.BLUE, ChatColor.BOLD));   
             }
         });
     }
@@ -154,9 +131,9 @@ public class ACCharacter {
                 // Set characteristics
                 zombie.setVelocity(new Vector());
                 zombie.setTarget(null);
-                zombie.setMaxHealth(20);
+                zombie.setMaxHealth(10);
                 zombie.setVillager(false);
-                zombie.setCustomName(npc.getChatColor() + npc.name());
+                zombie.setCustomName(String.format("%s%s%s", npc.getChatColor(), npc.name(), ChatColor.BOLD));
                 
                 // Set equipment
                 EntityEquipment equipment = zombie.getEquipment();

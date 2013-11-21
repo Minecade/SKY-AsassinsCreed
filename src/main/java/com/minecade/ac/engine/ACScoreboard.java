@@ -1,7 +1,11 @@
 package com.minecade.ac.engine;
 
+import java.util.Collection;
+import java.util.Iterator;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
@@ -22,6 +26,41 @@ public class ACScoreboard {
      * Scoreboard title
      */
     private final String ASSASSIN = "Assassin";
+    
+    /**
+     * Scoreboard players left
+     */
+    private final String TIME_LEFT = "Time Left";
+    
+    /**
+     * Scoreboard players to start
+     */
+    private final String PLAYERS_TO_START = "Players to Start";
+    
+    /**
+     * Scoreboard objective
+     */
+    private final String OBJECTIVE = "Black Flag";
+    
+    /**
+     * Scoreboard assassin lives
+     */
+    private final String ASSASSIN_LIVES = "Assassin's Lives";
+    
+    /**
+     * Scoreboard Navy
+     */
+    private final String NAVY = "Navy";
+    
+    /**
+     * Scoreboard Prisioners
+     */
+    private final String TARGETS = "Targets";
+    
+    /**
+     * Scoreboard Prisioners
+     */
+    private final String PRISIONERS = "Prisioners";
 
     private Scoreboard scoreboard;
     
@@ -32,135 +71,73 @@ public class ACScoreboard {
     public Scoreboard getScoreboard(){
         return this.scoreboard;
     }
-    
     /**
      * Scoreboard objective
-     */
-    private final String OBJECTIVE = "Black Flag";
-    
-    /**
-     * Scoreboard objective
-     * @return The scoreboard objective.
      * @author kvnamo
      */
     private Objective getScoreboardObjective(){
         return this.scoreboard.getObjective(OBJECTIVE);
     }
-    
-    /**
-     * Scoreboard players to start
-     */
-    private final String PLAYERS_TO_START = "Players to Start"; 
-    
     /**
      * Sets the number of players necessaries to start the game
      * @param playersToStart
      * @author kvnamo
      */
-    public void setPlayersToStart(int matchPlayers){
+    public void setLobbyPlayers(int matchPlayers){
         this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(PLAYERS_TO_START)).setScore(matchPlayers);
     }
-    
-    /**
-     * Scoreboard assassin lives
-     */
-    private final String ASSASSIN_LIVES = "Assassin's Lives";
-    
     /**
      * Sets the assassin remaining lives
      * @param assassinlives
      * @author kvnamo
      */
     public void setAssassinLives(int assassinlives){
-        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(ASSASSIN_LIVES)).setScore(assassinlives);
+        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(String.format("%s", ASSASSIN_LIVES))).setScore(assassinlives);
     }
-    
-    /**
-     * Scoreboard Navy
-     */
-    private final String NAVY = "Navy";
-    
-    /**
-     * Sets the current alive navy 
-     * @param navy
-     * @author kvnamo
-     */
+
     public void setNavy(int navy){
-        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(NAVY)).setScore(navy);
+        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(String.format("%s%s Free", ChatColor.DARK_GRAY, NAVY))).setScore(navy);
     }
-    
-    /**
-     * Scoreboard Prisioners
-     */
-    private final String PRISIONERS = "Prisioners";
-    
     /**
      * Sets the current prisioners
      * @param playersToStart
      * @author kvnamo
      */
     public void setPrisioners(int prisioners){
-        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(PRISIONERS)).setScore(prisioners);
+        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(String.format("%s%s", ChatColor.WHITE, PRISIONERS))).setScore(prisioners);
     }
-    
-    /**
-     * Scoreboard Prisioners
-     */
-    private final String TARGETS = "Targets";
-    
     /**
      * Sets the current alive targets 
      * @param playersToStart
      * @author kvnamo
      */
     public void setNPCs(int npcs){
-        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(TARGETS)).setScore(npcs);
+        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(String.format("%s%s", ChatColor.DARK_GRAY, TARGETS))).setScore(npcs);
     }
-    
-    /**
-     * Scoreboard players left
-     */
-    private final String TIME_LEFT = "Time Left";
-    
     /**
      * Sets the time left
      * @param timeLeft
      * @author kvnamo
      */
     public void setTimeLeft(int timeLeft) {
-        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(TIME_LEFT)).setScore(timeLeft);
+        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(String.format("%s%s", ChatColor.WHITE, TIME_LEFT))).setScore(timeLeft);
     }
     
-    /**
-     * PMScoreboard constructor
-     * @param plugin
-     * @param lobby team
-     * @author kvnamo
-     */
-    public ACScoreboard(AssassinsCreedPlugin plugin, boolean lobbyTeam){       
+    public void unassignTeam(ACPlayer player){
+        Team team = this.scoreboard.getTeam(PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount()).name());
+        team.removePlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
+    }
+
+    public ACScoreboard(AssassinsCreedPlugin plugin){       
         // Creates new scoreboard
         this.scoreboard =  plugin.getServer().getScoreboardManager().getNewScoreboard();
         
-        if(lobbyTeam && this.scoreboard.getTeams().isEmpty()){
+        // Create teams
+        if(this.scoreboard.getTeams().isEmpty()){
             for(PlayerTagEnum tag: PlayerTagEnum.values()){
                 this.scoreboard.registerNewTeam(tag.name()).setPrefix(tag.getPrefix());
             }
         }
-        else if(this.scoreboard.getTeams().isEmpty()){
-            // Create match teams
-            this.scoreboard.registerNewTeam(ASSASSIN).setPrefix(
-                    String.format("[%s%s%s] ", ChatColor.RED, ASSASSIN, ChatColor.RESET));
-            this.scoreboard.registerNewTeam(NAVY).setPrefix(
-                    String.format("[%s%s%s] ", ChatColor.BLUE, NAVY, ChatColor.RESET));
-        }
-    }
-
-    
-    /**
-     * Init scoreboard
-     * @author kvnamo
-     */
-    public void init(){
         // Unregister previous scoreboard
         if (this.getScoreboardObjective() != null) {
             this.getScoreboardObjective().unregister();
@@ -168,8 +145,8 @@ public class ACScoreboard {
         
         // Setup scoreboard
         this.scoreboard.registerNewObjective(OBJECTIVE, OBJECTIVE)
-            .setDisplayName(String.format("%s%s", ChatColor.RED, TITLE)); 
-        this.getScoreboardObjective().setDisplaySlot(DisplaySlot.SIDEBAR);   
+            .setDisplayName(String.format("%s%s", ChatColor.GOLD, TITLE)); 
+        this.getScoreboardObjective().setDisplaySlot(DisplaySlot.SIDEBAR);
     }
     
     /**
@@ -178,30 +155,68 @@ public class ACScoreboard {
      * @author kvnamo
      */
     public void assignPlayerTeam(ACPlayer player){
-        PlayerTagEnum playerTag = PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount());
-        
-        Team team = this.scoreboard.getTeam(playerTag.name());
-        team.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
-        team.setPrefix(playerTag.getPrefix());
+        if(player.getBukkitPlayer().isValid()){
+            PlayerTagEnum playerTag = PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount());
+            Team team = this.scoreboard.getTeam(playerTag.name());
+            team.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
+            team.setPrefix(playerTag.getPrefix());
+        }
     }
     
-    /**
-     * Assign team to player
-     * @param player
-     * @author kvnamo
-     */
-    public void assignCharacterTeam(ACPlayer player){
-        
-        if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-            Team team = this.scoreboard.getTeam(ASSASSIN);
-            team.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
-            team.setPrefix(String.format("[%s%s%s] ", ChatColor.RED, ASSASSIN, ChatColor.RESET));
-        }
-        else{
-            Team team = this.scoreboard.getTeam(NAVY);
-            team.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
-            team.setPrefix(String.format("[%s%s%s] ", ChatColor.BLUE, NAVY, ChatColor.RESET));
-        }
 
+    public void assignCharacterNavyTeam(Collection<ACPlayer> players){
+        
+        if(players != null && players.size() > 0){
+            Team team;
+            Team navyTeam;
+            //create the new teams
+            navyTeam = this.scoreboard.getTeam(this.NAVY);
+            if(navyTeam == null){
+                navyTeam = this.scoreboard.registerNewTeam(this.NAVY);
+            } else {
+                //clean team players if team already exist
+                Iterator<OfflinePlayer> navyPlayers = navyTeam.getPlayers().iterator();
+                while(navyPlayers.hasNext()) {
+                    navyTeam.removePlayer(navyPlayers.next());
+                }
+            }
+            
+            for(ACPlayer player : players){
+                if(!CharacterEnum.ASSASSIN.equals(player.getCharacter()) && player.getBukkitPlayer().isValid()){
+                    team = this.scoreboard.getTeam(PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount()).name());
+                    team.removePlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
+                    navyTeam.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
+                    navyTeam.setPrefix(String.format("[%s%s%s] ", ChatColor.BLUE, NAVY, ChatColor.RESET));
+                    player.getBukkitPlayer().setScoreboard(this.getScoreboard());
+                }
+            }
+        }
+    }
+    
+    public void assignAssassinTeam(ACPlayer player){
+        if(player != null && CharacterEnum.ASSASSIN.equals(player.getCharacter()) 
+                && player.getBukkitPlayer() != null && !player.getBukkitPlayer().isValid()){
+            return;
+        }
+        Team team;
+        Team navyTeam;
+        //create the new teams
+        navyTeam = this.scoreboard.getTeam(CharacterEnum.ASSASSIN.name());
+        if(navyTeam == null){
+            navyTeam = this.scoreboard.registerNewTeam(CharacterEnum.ASSASSIN.name());
+        } else {
+            //clean team if this already exist
+            Iterator<OfflinePlayer> navyPlayers = navyTeam.getPlayers().iterator();
+            while(navyPlayers.hasNext()) {
+                navyTeam.removePlayer(navyPlayers.next());
+            }
+        }
+        if(player != null && player.getCharacter() != null && CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+            team = this.scoreboard.getTeam(PlayerTagEnum.getTag(player.getBukkitPlayer(), player.getMinecadeAccount()).name());
+            team.removePlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
+            navyTeam.addPlayer(Bukkit.getOfflinePlayer(player.getBukkitPlayer().getName()));
+            navyTeam.setPrefix(String.format("[%s%s%s] ", ChatColor.RED, ASSASSIN, ChatColor.RESET));
+            player.getBukkitPlayer().setScoreboard(this.getScoreboard());
+        }
     }
 }

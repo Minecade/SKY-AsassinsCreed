@@ -18,6 +18,15 @@ public class ServerModel {
     @Id
     @Column(name = "id", unique = true)
     private int serverId;
+    @Column(name = "max_players", nullable = false)
+    private int maxPlayers;
+    @Column(name = "online_players", nullable = false)
+    private int onlinePlayers;
+    @Column(name = "world_name", nullable = false)
+    private String worldName;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "state", nullable = false)
+    private ServerStatusEnum status = ServerStatusEnum.WAITING_FOR_PLAYERS;
     
     /**
      * Get server id
@@ -35,10 +44,6 @@ public class ServerModel {
     public void setServerId(int serverId) {
         this.serverId = serverId;
     }
-    
-    @Column(name = "max_players", nullable = false)
-    private int maxPlayers;
-    
     /**
      * Get max players
      * @return the maxPlayers
@@ -47,7 +52,6 @@ public class ServerModel {
     public int getMaxPlayers() {
         return maxPlayers;
     }
-
     /**
      * Set max players
      * @param maxPlayers 
@@ -56,10 +60,6 @@ public class ServerModel {
     public void setMaxPlayers(int maxPlayers) {
         this.maxPlayers = maxPlayers;
     }
-    
-    @Column(name = "online_players", nullable = false)
-    private int onlinePlayers;
-
     /**
      * Get online players
      * @return onlinePlayers
@@ -77,10 +77,6 @@ public class ServerModel {
     public void setOnlinePlayers(int onlinePlayers) {
         this.onlinePlayers = onlinePlayers;
     }
-    
-    @Column(name = "world_name", nullable = false)
-    private String worldName;
-    
     /**
      * Get the world name
      * @return world name
@@ -98,11 +94,6 @@ public class ServerModel {
     public void setWorldName(String worldName) {
         this.worldName = worldName;
     }
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "state", nullable = false)
-    private ServerStatusEnum status = ServerStatusEnum.WAITING_FOR_PLAYERS;
-    
     /**
      * Get the status
      * @return status

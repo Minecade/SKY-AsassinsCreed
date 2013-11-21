@@ -11,6 +11,7 @@ import com.minecade.engine.data.MinecadePersistence;
 public class ACPersistence extends MinecadePersistence { 
 
     private int lastPlayerCount;
+    private final AssassinsCreedPlugin plugin;
 
     /**
      * ACPersistence constructor
@@ -19,6 +20,7 @@ public class ACPersistence extends MinecadePersistence {
      */
     public ACPersistence(final AssassinsCreedPlugin plugin) {
         super(plugin);
+        this.plugin = plugin;
     }
     
     /**
@@ -37,54 +39,55 @@ public class ACPersistence extends MinecadePersistence {
      * @author kvnamo
      */
     public void createOrUpdateServer(String worldName) {
+        int serverId = plugin.getConfig().getInt("server.id");
         
-        ServerModel server = getServerById(this.plugin.getConfig().getInt("server.id"));
+        ServerModel server = plugin.getDatabase().find(ServerModel.class)
+            .where().eq("serverId", serverId).findUnique(); 
         
+        // Creates a new bean that is managed by bukkit
         if(server == null) {
-            // create a new bean that is managed by bukkit
-            server = super.plugin.getDatabase().createEntityBean(ServerModel.class);
-            server.setServerId(super.plugin.getConfig().getInt("server.id"));
+            server = plugin.getDatabase().createEntityBean(ServerModel.class);
+            server.setServerId(serverId);
         }        
 
-        server.setMaxPlayers(super.plugin.getConfig().getInt("match.required-players"));
-        int playerCount = ((AssassinsCreedPlugin)super.plugin).getGame().getNextMatchPlayers();
-        server.setOnlinePlayers(playerCount);
+        server.setMaxPlayers(plugin.getConfig().getInt("match.required-players"));
+        server.setOnlinePlayers(0);
         server.setStatus(ServerStatusEnum.WAITING_FOR_PLAYERS);
         server.setWorldName(worldName);
         
-        // store the bean
-        super.plugin.getDatabase().save(server);
+        // Stores the bean
+        plugin.getDatabase().save(server);
     }
-    
     /**
      * Update server status.
      * @param serverStatus 
      * @author kvnamo
      */
-    public void updateServerStatus(ServerStatusEnum status) {
-        
+    public void updateServerStatus(ServerStatusEnum state, String worldName) {
         StringBuilder query = new StringBuilder("Update servers set state=:state ");
         
-        if(ServerStatusEnum.OFFLINE.equals(status)) {
+        if(ServerStatusEnum.OFFLINE.equals(state)) {
             query.append(", online_players=:online_players ");
         }
-        else if(ServerStatusEnum.FULL.equals(status)) {
+        if(ServerStatusEnum.FULL.equals(state)) {
             query.append(", online_players=:online_players ");
         }
+        query.append(", world_name=:world_name ");
         
         query.append("where id = :id");
         
         SqlUpdate update = plugin.getDatabase()
             .createSqlUpdate(query.toString())
-            .setParameter("state", status.name())
+            .setParameter("state", state.name())
             .setParameter("id", plugin.getConfig().getInt("server.id"));
         
-        if(ServerStatusEnum.OFFLINE.equals(status)) {
-            update.setParameter("online_players", 0).setParameter("world_name", "empty");
-        }
-        else if(ServerStatusEnum.FULL.equals(status)){
+        if(ServerStatusEnum.OFFLINE.equals(state)) {
+            update.setParameter("online_players", 0)
+            .setParameter("world_name", "empty");
+        }else if(ServerStatusEnum.FULL.equals(state)){
             update.setParameter("online_players", plugin.getConfig().getInt("match.required-players"));
         }
+        update.setParameter("world_name", worldName);
         
         update.execute();
     }
@@ -94,8 +97,10 @@ public class ACPersistence extends MinecadePersistence {
      * @author kvnamo
      */
     public void updateServerPlayers() {
+        final int playerCount = this.plugin.getGame().getPlayers().size();
         
-        final int playerCount = ((AssassinsCreedPlugin)super.plugin).getGame().getNextMatchPlayers();
+        if(ServerStatusEnum.FULL.equals(this.plugin.getGame().getServerStatus()))
+            return;
         
         if (playerCount == this.lastPlayerCount) {
             return;
@@ -103,10 +108,10 @@ public class ACPersistence extends MinecadePersistence {
         
         this.lastPlayerCount = playerCount;
         
-        String dml = "update servers set online_players = :online_players where id = :id";
-        SqlUpdate update = super.plugin.getDatabase().createSqlUpdate(dml)
+        String query = "update servers set online_players=:online_players where id = :id";
+        SqlUpdate update = plugin.getDatabase().createSqlUpdate(query)
                 .setParameter("online_players", playerCount)
-                .setParameter("id", super.plugin.getConfig().getInt("server.id"));
+                .setParameter("id", plugin.getConfig().getInt("server.id"));
         update.execute();
     }
 
