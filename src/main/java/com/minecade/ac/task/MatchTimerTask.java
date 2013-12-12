@@ -3,9 +3,6 @@ package com.minecade.ac.task;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import com.minecade.ac.engine.ACMatch;
-import com.minecade.ac.engine.ACPlayer;
-
-
 
 public class MatchTimerTask extends BukkitRunnable {
 
@@ -35,6 +32,7 @@ public class MatchTimerTask extends BukkitRunnable {
 
         this.match.timeLeft(this.countdown);
         this.match.updateScoreBoard();
+        this.match.updateLobbyPortal();
         if (this.countdown == 0) {
             switch (match.getStatus()) {
             case STARTING_MATCH:
@@ -49,7 +47,7 @@ public class MatchTimerTask extends BukkitRunnable {
                 this.match.verifyGameover();
                 this.countdown = this.match.getTimeLeft();
                 return;
-            case STOPPED:
+            case STOPPING:
                 this.match.finish(false);
                 break;
             default:

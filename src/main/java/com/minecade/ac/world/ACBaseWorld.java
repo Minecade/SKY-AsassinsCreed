@@ -16,7 +16,7 @@ import com.minecade.engine.MinecadeWorld;
 public class ACBaseWorld  extends MinecadeWorld {
     
     private List<Location> navySpawnLocation;
-    private Location assassinSpawnLocation;
+    private List<Location> assassinSpawnLocation;
     
     private Location navyRooomLocation;
     private Location bodyguardLocation;
@@ -31,6 +31,7 @@ public class ACBaseWorld  extends MinecadeWorld {
         super(worldName, worldLocation, plugin);
         configureACWorld(world);
         navySpawnLocation = new ArrayList<>();
+        assassinSpawnLocation = new ArrayList<>();
         npcLocation = new HashMap<NPCEnum, Location>();
     }
     
@@ -38,6 +39,7 @@ public class ACBaseWorld  extends MinecadeWorld {
         super(plugin);
         configureACWorld(world);
         navySpawnLocation = new ArrayList<>();
+        assassinSpawnLocation = new ArrayList<>();
         npcLocation = new HashMap<NPCEnum, Location>();
     }
     
@@ -51,10 +53,10 @@ public class ACBaseWorld  extends MinecadeWorld {
      * @param location 
      */
     public void addAssassinSpawnLocation(MapLocation location) {
-        assassinSpawnLocation = location.toLocation(world);
+        assassinSpawnLocation.add(location.toLocation(world));
     }
     public Location getAssassinSpawn() {
-        return assassinSpawnLocation;
+        return assassinSpawnLocation.get(plugin.getRandom().nextInt(assassinSpawnLocation.size()));
     }
     /**
      * Adds a location to possible entity spawn points.

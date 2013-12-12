@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
@@ -24,10 +24,12 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
@@ -37,6 +39,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 import com.minecade.ac.data.PlayerModel;
+import com.minecade.ac.engine.ACInventory.ShopItemEnum;
 import com.minecade.ac.enums.CharacterEnum;
 import com.minecade.ac.enums.MatchStatusEnum;
 import com.minecade.ac.enums.ServerStatusEnum;
@@ -61,23 +64,17 @@ public class ACMatch {
     private int timeLeft;
     private int readyCountdown;
     private MatchTimerTask timerTask;
-    private BukkitTask keepZombiesInplaceTask;
     private ACScoreboard acScoreboard;
     private String matchName;
     private Map<String, ACPlayer> players; 
     private Map<String, ACPlayer> spectators;
     private static final String LOBBY = "lobby1";
     private static int ASSASSIN_LIVES = 3;
+    private static final String ASSASSIN_INVENTORY_TITLE = "Assassin Shop";
     private int requiredPlayersToMatch;
     private ACBaseWorld world;
     private MatchStatusEnum status;
     
-    /**
-     * ACMatch constructor
-     * @param plugin
-     * @param acWorld
-     * @author Kvnamo
-     */
     public ACMatch(AssassinsCreedPlugin plugin, String matchName, Class<MinecadeWorld> classWorld){
         this.plugin = plugin;
         this.matchName = matchName;
@@ -86,8 +83,7 @@ public class ACMatch {
         // Get config properties
         this.time = this.plugin.getConfig().getInt("match.time");
         
-        //FIXME get this from config
-        this.readyCountdown = 30;
+        this.readyCountdown = plugin.getConfig().getInt("match.ready-countdown");
         
         // Initialize properties
         this.players =  new ConcurrentHashMap<String, ACPlayer>();
@@ -107,10 +103,10 @@ public class ACMatch {
         }
     }
     
-    public synchronized void playerJoin(ACPlayer player){
+    public synchronized boolean playerJoin(ACPlayer player){
         if (player == null) {
             Bukkit.getLogger().severe(String.format("Player is null in match.playerJoin"));
-            return;
+            return false;
         }
         switch(this.status){
         case STARTING_MATCH:
@@ -118,7 +114,7 @@ public class ACMatch {
                 if(this.requiredPlayersToMatch > this.players.size()){
                     if (this.players.containsKey(player.getBukkitPlayer().getName())) {
                         player.getBukkitPlayer().sendMessage(String.format("Player %s is already in this match", player.getBukkitPlayer().getName()));
-                        return;
+                        return false;
                     }
                     
                     this.players.put(player.getBukkitPlayer().getName(), player);
@@ -127,32 +123,29 @@ public class ACMatch {
                     this.acScoreboard.assignPlayerTeam(player);
                     //this.acScoreboard.setMatchPlayers(this.players.size());
                     player.getBukkitPlayer().setScoreboard(this.getAcScoreboard().getScoreboard());
+                    return true;
                 } else {
-                    //add spectators
-                    if(player.getMinecadeAccount().isVip() || plugin.getPersistence().isPlayerStaff(player.getBukkitPlayer())){
-                        this.addSpectatorToMatch(player, plugin.getGame().getLobbySpawnLocation());
-                    } else {
-                        this.teleportToLobby(player.getBukkitPlayer(), plugin.getConfig().getString("server.full-message"));
-                        Bukkit.getLogger().severe(String.format("Disconect linea match300"));
-                    }
+                    return false;
                 }
             }
-            return;
         case READY_TO_START:
-            return;
+            return false;
         case RUNNING:
             //add spectators
             if(player.getMinecadeAccount().isVip() || plugin.getPersistence().isPlayerStaff(player.getBukkitPlayer())){
                 this.addSpectatorToMatch(player, this.world.getAssassinSpawn());
             } else {
+                Bukkit.getLogger().severe(String.format("Disconect linea match 144"));
                 this.teleportToLobby(player.getBukkitPlayer(), plugin.getConfig().getString("server.full-message"));
             }
-            return;
+            return false;
+        case STOPPING:
         case STOPPED:
+            Bukkit.getLogger().severe(String.format("Disconect linea match 149"));
             this.teleportToLobby(player.getBukkitPlayer(), null);
-            return;
+            return false;
         default:
-            break;
+            return false;
         }
     }
     
@@ -163,9 +156,27 @@ public class ACMatch {
             break;
         case READY_TO_START:
             break;
+        case STOPPING:
         case STOPPED:
             break;
         case RUNNING:
+            if(event.getClickedBlock() != null && event.getClickedBlock().getType() == Material.STONE_PLATE){
+                if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                    // Pressure plates on diamond blocks throughout the map give the assassin 2 level of experience
+                    Material materialStandPlayer = this.world.getWorld().getBlockAt(event.getClickedBlock().getLocation().getBlockX(), 
+                            event.getClickedBlock().getLocation().getBlockY()-1, 
+                            event.getClickedBlock().getLocation().getBlockZ()).getType();
+                    if(materialStandPlayer.equals(Material.DIAMOND_BLOCK)){
+                        Block block = event.getClickedBlock();
+                        player.getBukkitPlayer().setLevel(player.getBukkitPlayer().getLevel() + 2);
+                        block.setType(Material.AIR);
+                        player.getBukkitPlayer().sendMessage(String.format("[%s%s%s]%sYour experience has been %s%sincreased%s%s in %s2%s level!!", 
+                                ChatColor.YELLOW, player.getBukkitPlayer().getName(), ChatColor.RESET, ChatColor.DARK_GRAY, 
+                                ChatColor.RED, ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_GRAY, ChatColor.AQUA, ChatColor.DARK_GRAY));
+                    }
+                }
+                return;
+            }
             if(player.getBukkitPlayer().getItemInHand() != null){
                 ItemStack item = player.getBukkitPlayer().getItemInHand();
                 //Emerald invisibility
@@ -177,11 +188,15 @@ public class ACMatch {
                             player.setCooling(true);
                             player.getBukkitPlayer().getInventory().setArmorContents(null);
                             player.getBukkitPlayer().setItemInHand(null);
-                            player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 20 * 10, 1));
-                            player.getBukkitPlayer().sendMessage(String.format("%sYou are invisible for the next %s10%s seconds.", 
-                                    ChatColor.DARK_GRAY, ChatColor.AQUA, ChatColor.DARK_GRAY));
-                            broadcastMessageToNavys(String.format("%sWatch out: %sAssassin %sis invisible for the next %s10%s seconds!", 
-                                    ChatColor.GOLD, ChatColor.RED, ChatColor.DARK_GRAY, ChatColor.AQUA, ChatColor.DARK_GRAY));
+                            int duration = 10;
+                            if(player.isEmeraldImproved()){
+                                duration = ShopItemEnum.IMPROVE_EMERALD.getDuration();
+                            }
+                            player.getBukkitPlayer().addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 20 * duration, 1));
+                            player.getBukkitPlayer().sendMessage(String.format("%sYou are invisible for the next %s%s%s seconds.", 
+                                    ChatColor.DARK_GRAY, ChatColor.AQUA, duration, ChatColor.DARK_GRAY));
+                            broadcastMessageToNavys(String.format("%sWatch out: %sAssassin %sis invisible for the next %s%s%s seconds!", 
+                                    ChatColor.GOLD, ChatColor.RED, ChatColor.DARK_GRAY, ChatColor.AQUA, duration, ChatColor.DARK_GRAY));
                             //put the armor when invisibility has gone
                             Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
                                 @Override
@@ -189,7 +204,7 @@ public class ACMatch {
                                     player.getBukkitPlayer().getInventory().setArmorContents(ACInventory.getAssassinArmor());
                                     player.getBukkitPlayer().setItemInHand(ACInventory.getInvisibleEmerald());
                                 }
-                            }, 20 * 10);
+                            }, 20 * duration);
                             //remove cooling down property after 30 seconds
                             Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
                                 @Override
@@ -223,6 +238,25 @@ public class ACMatch {
                         }, 20);
                     }
                 }
+                //Shop
+                if(ACInventory.getShopIcon().getType().equals(item.getType())){
+                    if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                        final int slot = player.getBukkitPlayer().getInventory().getHeldItemSlot();
+                        Inventory assassinShopInventory = plugin.getServer().createInventory(null, 9, ASSASSIN_INVENTORY_TITLE);
+                        assassinShopInventory.setContents(ACInventory.getAssassinShopInventory(player));
+                        player.getBukkitPlayer().openInventory(assassinShopInventory);
+                        //set the bomb in the same place 1 sec after it was thrown
+                        Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+                            @Override
+                            public void run() {
+                                if(!player.getBukkitPlayer().getInventory().contains(ACInventory.getShopIcon().getType())){
+                                    player.getBukkitPlayer().getInventory().setItem(slot, ACInventory.getShopIcon());
+                                }
+                            }
+                        }, 10);
+                    }
+                    event.setCancelled(true);
+                }
                 //Place finder
                 if(ACInventory.getPlaceFinder().getType().equals(item.getType())){
                     if(!this.spectators.containsKey(player.getBukkitPlayer().getName())){
@@ -244,6 +278,7 @@ public class ACMatch {
                         }
                     } else {
                         //compass was used by spectator
+                        Bukkit.getLogger().severe(String.format("Disconect linea 285"));
                         EngineUtils.disconnect(player.getBukkitPlayer(), LOBBY, null);
                     }
                     Bukkit.getLogger().severe(String.format("Compass Place Finder was used for a navy"));
@@ -264,17 +299,42 @@ public class ACMatch {
         }
     }
     
-    /**
-     * 
-     * @param player
-     * @return
-     */
+    public void inventoryClick(InventoryClickEvent event, final ACPlayer player){
+        //Improve emerald
+        if(event.getCurrentItem() != null && ACInventory.getImproveEmerald(player).getType().equals(event.getCurrentItem().getType())){
+            if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                if(player.isEmeraldImproved()){
+                    player.getBukkitPlayer().sendMessage(String.format("[%s%s%s]%sYou already %sbuyed %sthis %sitem",  
+                            ChatColor.YELLOW, player.getBukkitPlayer().getName(), ChatColor.RESET, ChatColor.DARK_GRAY, ChatColor.RED, 
+                            ChatColor.DARK_GRAY, ChatColor.YELLOW));
+                    player.getBukkitPlayer().closeInventory();
+                } else {
+                    if(player.getBukkitPlayer().getLevel() >= ShopItemEnum.IMPROVE_EMERALD.getCost()){
+                        player.getBukkitPlayer().setLevel(player.getBukkitPlayer().getLevel() - ShopItemEnum.IMPROVE_EMERALD.getCost());
+                        player.setEmeraldImproved(true);
+                        player.getBukkitPlayer().sendMessage(String.format("[%s%s%s]%sYour %sEmerald %swas improved, its effect will take %s%s%s seconds ",  
+                                ChatColor.YELLOW, player.getBukkitPlayer().getName(), ChatColor.RESET, ChatColor.DARK_GRAY, ChatColor.RED, 
+                                ChatColor.DARK_GRAY, ChatColor.AQUA, ShopItemEnum.IMPROVE_EMERALD.getDuration(), ChatColor.DARK_GRAY));
+                        player.getBukkitPlayer().closeInventory();
+                    } else {
+                        int leftLevels = ShopItemEnum.IMPROVE_EMERALD.getCost() - player.getBukkitPlayer().getLevel();
+                        player.getBukkitPlayer().sendMessage(String.format("[%s%s%s]%sYou need %s%s%s %sexperience %slevels more to buy this item",  
+                                ChatColor.YELLOW, player.getBukkitPlayer().getName(), ChatColor.RESET, ChatColor.DARK_GRAY, ChatColor.AQUA, leftLevels, 
+                                ChatColor.RESET, ChatColor.RED, ChatColor.DARK_GRAY));
+                        player.getBukkitPlayer().closeInventory();
+                    }
+                }
+            }
+        }
+    }
+
     public void entityDamagedByVoid(ACPlayer player) {
         // cancel all kind of damage if player is not in a match
         switch (this.status) {
         case RUNNING:
             player.getBukkitPlayer().teleport(this.world.getNavyRandomSpawn());
             break;
+        case STOPPING:
         case STOPPED:
         case STARTING_MATCH:
             player.getBukkitPlayer().teleport(plugin.getGame().getLobbySpawnLocation());
@@ -287,12 +347,22 @@ public class ACMatch {
     private void addSpectatorToMatch(ACPlayer player, Location respawnLocation){
         this.spectators.remove(player.getBukkitPlayer().getName());
         this.spectators.put(player.getBukkitPlayer().getName(), player);
+        
         player.getBukkitPlayer().setAllowFlight(true);
         EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
         this.hidePlayer(player.getBukkitPlayer());
         player.getBukkitPlayer().setCanPickupItems(false);
         player.getBukkitPlayer().getInventory().addItem(ACInventory.getLeaveCompass());
+        player.getBukkitPlayer().sendMessage(String.format("%sWelcome to %smatch %s%s%s", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.YELLOW, ChatColor.BOLD, this.matchName));
+        String players = null;
+        for (ACPlayer playerInMatch : this.players.values()) {
+            players = StringUtils.isBlank(players) ? playerInMatch.getBukkitPlayer().getName() : players + ", " + playerInMatch.getBukkitPlayer().getName();
+        }
+        
+        player.getBukkitPlayer().sendMessage(String.format("%sPlayers in this %smatch: %s%s", ChatColor.DARK_GRAY, ChatColor.RED, ChatColor.YELLOW, players));
         player.getBukkitPlayer().sendMessage(String.format("%s%sYou are now spectating the match!", ChatColor.DARK_PURPLE, ChatColor.BOLD));
+        
+        player.getBukkitPlayer().setScoreboard(this.getAcScoreboard().getScoreboard());
         //if spectator is added respawn location must be null, respawn event make the teleport to respawn point
         if(respawnLocation != null)
             player.getBukkitPlayer().teleport(respawnLocation);
@@ -302,7 +372,6 @@ public class ACMatch {
     
     /**
      * Init match 
-     * @author Kvnamo
      */
     public void init(){
         
@@ -321,14 +390,33 @@ public class ACMatch {
     }
     
     private ACPlayer selectAssassin(Collection<ACPlayer> players){
-        if (players.size() <= 0)
+        if (players.size() <= 0){
             return null;
-        
-        Collection<ACPlayer> tempPlayers = new ArrayList<ACPlayer>(players);
-        ACPlayer assassin = (ACPlayer) tempPlayers.toArray()[plugin.getRandom().nextInt(tempPlayers.size())];
-        assassin.setCharacter(CharacterEnum.ASSASSIN);
-        assassin.setLives(ASSASSIN_LIVES);
-        return assassin;
+        }
+        synchronized(this.players){
+            Player assassinPlayer = plugin.getPassManager().selectPlayer(castListToPlayers(players));
+            if(assassinPlayer != null){
+                ACPlayer assassinACPlayer = this.players.get(assassinPlayer.getName());
+                if(assassinACPlayer != null){
+                    assassinACPlayer.setCharacter(CharacterEnum.ASSASSIN);
+                    assassinACPlayer.setLives(ASSASSIN_LIVES);
+                    return assassinACPlayer;
+                }
+            }
+            Collection<ACPlayer> tempPlayers = new ArrayList<ACPlayer>(players);
+            ACPlayer assassin = (ACPlayer) tempPlayers.toArray()[plugin.getRandom().nextInt(tempPlayers.size())];
+            assassin.setCharacter(CharacterEnum.ASSASSIN);
+            assassin.setLives(ASSASSIN_LIVES);
+            return assassin;
+        }
+    }
+    
+    private Collection<Player> castListToPlayers(Collection<ACPlayer> players){
+        Collection<Player> bukkitPlayers = new ArrayList<>();
+        for(ACPlayer acPlayer : players){
+            bukkitPlayers.add(acPlayer.getBukkitPlayer());
+        }
+        return bukkitPlayers;
     }
     
     public void prepareMatch(){
@@ -341,8 +429,8 @@ public class ACMatch {
         
         if(assassin == null){
             Bukkit.getLogger().severe(String.format(
-                    "ACMatch line 296: Something was wrong with selecting assassin, match must end, Players in match: %s", this.players.size()));
-            this.verifyGameover();
+                    "ACMatch line 296: Something was wrong with selecting assassin, match must end, Players in match: %s and Match.status: %s", this.players.size(), this.status));
+            //this.verifyGameover();
         }
         
         synchronized(this.players){
@@ -399,44 +487,10 @@ public class ACMatch {
                 }
             });
         }
-        
-        // Load npc.
-        NPCEnum npc;
-        Location location;
-        int length = NPCEnum.values().length;
-
-        for (int i = 0; i < length; i++) {
-            npc = NPCEnum.values()[i];
-            location = this.world.getNPCLocation(npc);
-            // Spawn npc
-            Zombie zombie = (Zombie) this.world.getWorld().spawnEntity(location, EntityType.ZOMBIE);
-            this.npcs.add(zombie);
-            ACCharacter.zombie(this.plugin, zombie, npc);
-        }
-        //FIXME: livestreaming is in 2 hours, keep zombies in same place of a better way
-        this.keepZombiesInplaceTask = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
-            @Override
-            public void run() {
-                for(Zombie zombie : ACMatch.this.npcs){
-                    NPCEnum npcEnum = NPCEnum.getNPCEnumByString(ChatColor.stripColor(zombie.getCustomName()));
-                    if(npcEnum != null && zombie.isValid()){
-                        zombie.teleport(ACMatch.this.world.getNPCLocation(npcEnum));
-                        //Bukkit.getLogger().severe(String.format("Zombie %s was teleported to: %s", npcEnum.name(), ACMatch.this.world.getNPCLocation(npcEnum)));
-                    } else {
-                        ACMatch.this.npcs.remove(zombie);
-                    }
-                }
-            }
-        },1, 20);
-        
         // Start game timer.
         this.timeLeft(this.readyCountdown);
     }
     
-    /**
-     * Start match
-     * @author kvnamo
-     */
     public void start(){
         this.status = MatchStatusEnum.RUNNING;
         this.timeLeft(this.time);
@@ -469,6 +523,25 @@ public class ACMatch {
                 spectator.getBukkitPlayer().teleport(this.world.getNavyRoomLocation());
             }
         }
+
+        Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+            @Override
+            public void run() {
+                // Load npc.
+                NPCEnum npc;
+                Location location;
+                int length = NPCEnum.values().length;
+                
+                for (int i = 0; i < length; i++) {
+                    npc = NPCEnum.values()[i];
+                    location = ACMatch.this.world.getNPCLocation(npc);
+                    // Spawn npc
+                    Zombie zombie = (Zombie) ACMatch.this.world.getWorld().spawnEntity(location, EntityType.ZOMBIE);
+                    ACMatch.this.npcs.add(zombie);
+                    ACCharacter.zombie(ACMatch.this.plugin, zombie, npc);
+                }
+            }
+        }, 40l);
     }
     
     private void setupNavyType(ACPlayer navy) {
@@ -504,12 +577,10 @@ public class ACMatch {
             ACPlayer assassin = this.getAssassin();
             if((this.timeLeft <= 0) || assassin == null || (assassin != null && assassin.getLives() <= 0)){
                 //navy team win
+                this.status = MatchStatusEnum.STOPPING;
                 this.timeLeft(10);
                 this.timerTask.setCountdown(this.timeLeft);
-                this.status = MatchStatusEnum.STOPPED;
-                if(this.keepZombiesInplaceTask != null){
-                    this.keepZombiesInplaceTask.cancel();
-                }
+                Bukkit.getLogger().severe(String.format("VerifyGameOver linea 576, players: %s", this.players.size()));
                 String winners = null, winnerName = null;
                 for (ACPlayer navy : this.players.values()) {
                     if(!CharacterEnum.ASSASSIN.equals(navy.getCharacter())){
@@ -526,11 +597,11 @@ public class ACMatch {
                 this.broadcastMessage(String.format("%sThanks for playing! Winners: %s%s%s", ChatColor.RED, ChatColor.BOLD, ChatColor.YELLOW,
                         winners == null ? "None" : winners));
             } else {
-                if(this.getNPCValid() <= 0){
+                if(this.getNPCValid() <= 0 && this.status.equals(MatchStatusEnum.RUNNING)){
                     //assassin win
+                    this.status = MatchStatusEnum.STOPPING;
                     this.timeLeft(10);
                     this.timerTask.setCountdown(this.timeLeft);
-                    this.status = MatchStatusEnum.STOPPED;
                     if(assassin != null){
                         this.savePlayerWinner(assassin, 3);
                         assassin.getBukkitPlayer().sendMessage(String.format("%sThanks for playing: %s%s%s, %s%sYou are the Winner!!!", ChatColor.RED, 
@@ -572,6 +643,15 @@ public class ACMatch {
          }
          return null;
      }
+     
+     private int getAssassinLives(){
+         for(ACPlayer player : this.players.values()){
+             if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+                 return player.getLives();
+             }
+         }
+         return 0;
+     }
     
     public void finish(boolean returnToLobby){
 
@@ -580,6 +660,7 @@ public class ACMatch {
             // Send players and spectators to the main lobby or game lobby
             for (ACPlayer player : this.players.values()) {
                 if (returnToLobby) {
+                    Bukkit.getLogger().severe(String.format("Disconect match linea 645"));
                     EngineUtils.disconnect(player.getBukkitPlayer().getPlayer(), LOBBY, null);
                 } else {
                     EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
@@ -587,6 +668,7 @@ public class ACMatch {
                     //player.setCurrentMatchName(null);
                     player.setCooling(false);
                     player.setInJail(false);
+                    player.setEmeraldImproved(false);
                     player.getBukkitPlayer().setLevel(0);
                     player.getBukkitPlayer().setExp(0);
                     this.acScoreboard.unassignTeam(player);
@@ -609,9 +691,6 @@ public class ACMatch {
             this.status = MatchStatusEnum.STOPPED;
             this.timeLeft = this.time;
             this.timerTask = null;
-            if(this.keepZombiesInplaceTask != null){
-                this.keepZombiesInplaceTask.cancel();
-            }
             // Initialize scoreboard
             this.acScoreboard = new ACScoreboard(this.plugin);
             
@@ -708,6 +787,7 @@ public class ACMatch {
             //player.setCurrentMatchName(null);
             player.setInJail(false);
             player.setCooling(false);
+            player.setEmeraldImproved(false);
             player.getBukkitPlayer().setLevel(1);
             player.getBukkitPlayer().setExp(0);
             
@@ -715,9 +795,11 @@ public class ACMatch {
             player.getPlayerModel().setLosses(player.getPlayerModel().getLosses() + 1);
             player.getPlayerModel().setTimePlayed(player.getPlayerModel().getTimePlayed() + this.time - this.timeLeft);
             this.updatePlayer(player);
-            
+            this.broadcastMessage(String.format("%sThe player %s[%s%s%s] %squit %sthe game", ChatColor.DARK_GRAY, ChatColor.RESET, ChatColor.YELLOW, 
+                    player.getBukkitPlayer().getName(), ChatColor.RESET, ChatColor.RED, ChatColor.DARK_GRAY));
             this.verifyGameover();
             break;
+        case STOPPING:
         case STOPPED:
             break;
         default:
@@ -726,12 +808,6 @@ public class ACMatch {
         }
     }
     
-    /**
-     * On player death
-     * @param player
-     * @param event
-     * @author kvnamo
-     */
     public void entityDeath(final EntityDeathEvent event, ACPlayer killer) {
         
         switch(this.status){
@@ -764,7 +840,7 @@ public class ACMatch {
                                     ChatColor.AQUA, this.npcs.size(), ChatColor.DARK_GRAY));
                             killer.getBukkitPlayer().sendMessage(String.format("%sUse the %sPlace finder%s[%sCompass%s] to locate the next one!", ChatColor.DARK_GRAY, 
                                     ChatColor.GREEN, ChatColor.DARK_GRAY, ChatColor.YELLOW, ChatColor.DARK_GRAY));
-                            // Gains 2 levels when killing a player
+                            // Gains 3 levels when killing a player
                             killer.getBukkitPlayer().setLevel(killer.getBukkitPlayer().getLevel() + 3);
                         }
                         // Update butter coins
@@ -780,6 +856,7 @@ public class ACMatch {
             break;
         case STARTING_MATCH:
             break;
+        case STOPPING:
         case STOPPED:
             break;
         default:
@@ -797,7 +874,6 @@ public class ACMatch {
             death.getBukkitPlayer().setLevel(1);
             if(CharacterEnum.ASSASSIN.equals(death.getCharacter())){
                 death.setLives(death.getLives() - 1);
-                //this.acScoreboard.setAssassinLives(death.getLives());
                 // Gains 2 levels when killing a player
                 death.getBukkitPlayer().setLevel(death.getBukkitPlayer().getLevel() + 2);
                 this.verifyGameover();
@@ -805,6 +881,7 @@ public class ACMatch {
             break;
         case STARTING_MATCH:
             break;
+        case STOPPING:
         case STOPPED:
             break;
         default:
@@ -813,19 +890,20 @@ public class ACMatch {
         }
     }
     
-    /**
-     * On player respawn.
-     * @param event
-     * @author: kvnamo
-     */
     public void playerRespawn(final PlayerRespawnEvent event, final ACPlayer player){
         
+        if(this.spectators.containsKey(player.getBukkitPlayer().getName())){
+            event.setRespawnLocation(this.world.getNavyRandomSpawn());
+            return;
+        }
         switch(this.status){
         case READY_TO_START:
             event.setRespawnLocation(this.world.getNavyRoomLocation());
             break;
         case RUNNING:
-            if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
+            CharacterEnum character = player.getCharacter();
+            switch (character) {
+            case ASSASSIN:
                 event.setRespawnLocation(this.world.getNavyRandomSpawn());
                 player.setCooling(false);
                 // Start invisibility.
@@ -845,20 +923,35 @@ public class ACMatch {
                         EngineUtils.clearBukkitPlayer(player.getBukkitPlayer());
                         player.getBukkitPlayer().getInventory().addItem(ACInventory.getInvisibleEmerald());
                         player.getBukkitPlayer().getInventory().addItem(ACInventory.getSmokeBomb());
+                        player.getBukkitPlayer().getInventory().addItem(ACInventory.getPlaceFinder());
+                        player.getBukkitPlayer().getInventory().addItem(ACInventory.getShopIcon());
                         player.getBukkitPlayer().getInventory().setArmorContents(ACInventory.getAssassinArmor());
                     }
                 }, 10 * 20);
-                return;
-            } else {
+                break;
+            case BODYGUARD:
                 event.setRespawnLocation(this.world.getKillBoxLocation());
                 this.sendToJailNavy(player);
-                CharacterEnum character = player.getCharacter();
-                //FIXME set inventory
+                ACCharacter.bodyguard(player);
+                break;
+            case MUSKETEER:
+                event.setRespawnLocation(this.world.getKillBoxLocation());
+                this.sendToJailNavy(player);
+                ACCharacter.musketeer(player);
+                break;
+            case SWORDSMAN:
+                event.setRespawnLocation(this.world.getKillBoxLocation());
+                this.sendToJailNavy(player);
+                ACCharacter.swordsman(player);
+                break;
+            default:
+                break;
             }
             break;
         case STARTING_MATCH:
             event.setRespawnLocation(plugin.getGame().getLobbySpawnLocation());
             break;
+        case STOPPING:
         case STOPPED:
             event.setRespawnLocation(plugin.getGame().getLobbySpawnLocation());
             break;
@@ -916,6 +1009,7 @@ public class ACMatch {
             break;
         case READY_TO_START:
         case STARTING_MATCH:
+        case STOPPING:
         case STOPPED:
             event.setCancelled(true);
             break;
@@ -947,6 +1041,7 @@ public class ACMatch {
             break;
         case READY_TO_START:
         case STARTING_MATCH:
+        case STOPPING:
         case STOPPED:
             event.setCancelled(true);
             break;
@@ -959,13 +1054,14 @@ public class ACMatch {
         switch (this.status) {
         case STARTING_MATCH:
         case READY_TO_START:
+        case STOPPING:
         case STOPPED:
             event.setCancelled(true);
         case RUNNING:
             if(event.getDamager() instanceof Arrow){
                 
-                Entity arrow = event.getDamager();
-                
+                Arrow arrow = (Arrow)event.getDamager();
+
                 String ownerTeam = (arrow.hasMetadata("ownerteam")) ? arrow.getMetadata("ownerteam").get(0).asString() : "";
                 
                 //arrow was shooted by enemy
@@ -1095,9 +1191,6 @@ public class ACMatch {
      * @author kvnamo
      */
     public void playerMove(final PlayerMoveEvent event, ACPlayer player) {
-        
-        final Block block = event.getTo().getBlock();
-        
         switch (this.status) {
         case READY_TO_START:
             if(!CharacterEnum.ASSASSIN.equals(player.getCharacter())){
@@ -1132,19 +1225,10 @@ public class ACMatch {
             }
             break;
         case RUNNING:
-            if(CharacterEnum.ASSASSIN.equals(player.getCharacter())){
-             // Pressure plates on diamond blocks throughout the map give the assassin 1 level of experience
-                if(Material.DIAMOND_BLOCK.equals(block.getType())){
-                    player.getBukkitPlayer().setLevel(player.getBukkitPlayer().getLevel() + 1);
-                    block.setType(Material.SAND);
-                    player.getBukkitPlayer().sendMessage(String.format("[%s%s%s]%sYour experience has been %s%sincreased%s%s!!", 
-                            ChatColor.YELLOW, player.getBukkitPlayer().getName(), ChatColor.RESET, ChatColor.DARK_GRAY, 
-                            ChatColor.RED, ChatColor.BOLD, ChatColor.RESET, ChatColor.DARK_GRAY));
-                }
-            }
             break;
         case STARTING_MATCH:
             break;
+        case STOPPING:
         case STOPPED:
             break;
         default:
@@ -1159,6 +1243,7 @@ public class ACMatch {
         if(bukkitPlayer != null && this.spectators.containsKey(bukkitPlayer.getName())){
             if (bukkitPlayer.getItemInHand() != null) {
                 if (ACInventory.getLeaveCompass().getType().equals(bukkitPlayer.getItemInHand().getType()))
+                    Bukkit.getLogger().severe(String.format("Disconect match linea 1231"));
                     EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
             }
             event.setCancelled(true);
@@ -1179,10 +1264,12 @@ public class ACMatch {
         case STARTING_MATCH:
             if (bukkitPlayer.getItemInHand() != null) {
                 if (Material.COMPASS.equals(bukkitPlayer.getItemInHand().getType())){
+                    Bukkit.getLogger().severe(String.format("Disconect match linea 1252"));
                     EngineUtils.disconnect(bukkitPlayer, LOBBY, null);
                 }
             }
             break;
+        case STOPPING:
         case STOPPED:
             break;
         default:
@@ -1230,6 +1317,7 @@ public class ACMatch {
         Bukkit.getScheduler().runTask(plugin, new Runnable() {
             @Override
             public void run() {
+                Bukkit.getLogger().severe(String.format("Disconect Match linea 1306"));
                 EngineUtils.disconnect(bukkitPlayer, LOBBY, msg);
             }
         });
@@ -1342,11 +1430,11 @@ public class ACMatch {
                     SettingsManager.getInstance().getInt(SettingsEnum.BUTTERCOIN_MULTIPLIER) * butterCoins ;
                 
                 ACMatch.this.plugin.getPersistence().addButterCoins(bukkitPlayer.getName(), vipButterCoins);
+                bukkitPlayer.sendMessage(String.format("%s[ButterCoins] %sYou have earned %s ButterCoins!", 
+                        ChatColor.GOLD, ChatColor.YELLOW, vipButterCoins));
             }
         });
         
-        bukkitPlayer.sendMessage(String.format("%s[ButterCoins] %sYou have earned %s ButterCoins!", 
-            ChatColor.GOLD, ChatColor.YELLOW, butterCoins));
     }
     
     public void timeLeft(int timeLeft) {
@@ -1375,11 +1463,28 @@ public class ACMatch {
             this.acScoreboard.setNavy(this.getNavysFree().size());
             this.acScoreboard.setNPCs(this.getNPCValid());
             this.acScoreboard.setPrisioners(this.getNavyPrisoners().size());
-            this.acScoreboard.setAssassinLives(this.getAssassin().getLives());
+            this.acScoreboard.setAssassinLives(this.getAssassinLives());
             break;
         case STARTING_MATCH:
             break;
+        case STOPPING:
         case STOPPED:
+            break;
+        default:
+            break;
+        }
+    }
+    
+    public void updateLobbyPortal(){
+        switch(this.status){
+        case RUNNING:
+            this.plugin.getPortalManager().enablePortal(this.matchName);
+            break;
+        case STARTING_MATCH:
+        case READY_TO_START:
+        case STOPPING:
+        case STOPPED:
+            this.plugin.getPortalManager().disablePortal(this.matchName);
             break;
         default:
             break;
@@ -1459,5 +1564,12 @@ public class ACMatch {
     
     public void setMinecadeWorld(ACBaseWorld world){
         this.world = world;
+    }
+
+    /**
+     * @return the world
+     */
+    public ACBaseWorld getWorld() {
+        return world;
     }
 }

@@ -4,14 +4,8 @@ import com.minecade.ac.enums.NPCEnum;
 import com.minecade.engine.MapLocation;
 import com.minecade.engine.MinecadePlugin;
 
-public class ACWorld3 extends ACBaseWorld {
-
-    /**
-     * ACWorld3 constructor
-     * @param plugin
-     * @author Kvnamo
-     */
-    public ACWorld3(MinecadePlugin plugin) {
+public class ACWorld5 extends ACBaseWorld{
+    public ACWorld5(MinecadePlugin plugin) {
 
         super(plugin);
 

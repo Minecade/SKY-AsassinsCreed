@@ -10,6 +10,9 @@ public enum MatchStatusEnum {
     // Match running.
     RUNNING,
     
+    // Match stopping.
+    STOPPING,
+    
     // Match stopped.
     STOPPED
     

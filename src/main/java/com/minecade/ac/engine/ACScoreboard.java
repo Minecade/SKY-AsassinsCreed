@@ -22,6 +22,8 @@ public class ACScoreboard {
      */
     private final String TITLE = "Assassin's Creed";
     
+    private final String TITLE_SERVER_FULL = "Server Full";
+    
     /**
      * Scoreboard title
      */
@@ -36,6 +38,8 @@ public class ACScoreboard {
      * Scoreboard players to start
      */
     private final String PLAYERS_TO_START = "Players to Start";
+    
+    private final String PLAYERS_IN_LOBBY = "Players in Lobby";
     
     /**
      * Scoreboard objective
@@ -71,26 +75,23 @@ public class ACScoreboard {
     public Scoreboard getScoreboard(){
         return this.scoreboard;
     }
-    /**
-     * Scoreboard objective
-     * @author kvnamo
-     */
+
     private Objective getScoreboardObjective(){
         return this.scoreboard.getObjective(OBJECTIVE);
     }
-    /**
-     * Sets the number of players necessaries to start the game
-     * @param playersToStart
-     * @author kvnamo
-     */
+    
+    public void registerTitleServerFull(){
+        this.scoreboard.getObjective(OBJECTIVE).setDisplayName(String.format("%s%s", ChatColor.GOLD, TITLE_SERVER_FULL));
+    }
+
     public void setLobbyPlayers(int matchPlayers){
         this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(PLAYERS_TO_START)).setScore(matchPlayers);
     }
-    /**
-     * Sets the assassin remaining lives
-     * @param assassinlives
-     * @author kvnamo
-     */
+    
+    public void setPlayersInLobby(int matchPlayers){
+        this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(PLAYERS_IN_LOBBY)).setScore(matchPlayers);
+    }
+    
     public void setAssassinLives(int assassinlives){
         this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(String.format("%s", ASSASSIN_LIVES))).setScore(assassinlives);
     }
@@ -98,27 +99,15 @@ public class ACScoreboard {
     public void setNavy(int navy){
         this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(String.format("%s%s Free", ChatColor.DARK_GRAY, NAVY))).setScore(navy);
     }
-    /**
-     * Sets the current prisioners
-     * @param playersToStart
-     * @author kvnamo
-     */
+
     public void setPrisioners(int prisioners){
         this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(String.format("%s%s", ChatColor.WHITE, PRISIONERS))).setScore(prisioners);
     }
-    /**
-     * Sets the current alive targets 
-     * @param playersToStart
-     * @author kvnamo
-     */
+
     public void setNPCs(int npcs){
         this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(String.format("%s%s", ChatColor.DARK_GRAY, TARGETS))).setScore(npcs);
     }
-    /**
-     * Sets the time left
-     * @param timeLeft
-     * @author kvnamo
-     */
+
     public void setTimeLeft(int timeLeft) {
         this.getScoreboardObjective().getScore(Bukkit.getOfflinePlayer(String.format("%s%s", ChatColor.WHITE, TIME_LEFT))).setScore(timeLeft);
     }
